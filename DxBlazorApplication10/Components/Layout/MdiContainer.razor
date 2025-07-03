@@ -1,0 +1,148 @@
+﻿@attribute [Authorize]
+@inject MdiStateService MdiStateService
+@inject IJSRuntime JS
+@implements IDisposable
+@rendermode InteractiveServer
+
+@if (MdiStateService.OpenTabs.Any())
+{
+    var activeTab = MdiStateService.OpenTabs[ActiveTabIndex];
+
+    <div @ref=divContainer>
+        <DxTabs @ref=tabs @bind-ActiveTabIndex ="@ActiveTabIndex"
+                AllowTabReorder="true"
+                TabReordering="OnTabReordering"
+                TabClosing="@OnTabClosing"
+                RenderMode="TabsRenderMode.AllTabs">
+            @foreach (var tab in MdiStateService.OpenTabs)
+            {
+                @* <DxTab Id="@tab.Id" Text="@tab.Title" AllowClose="true" /> *@
+                <DxTabPage Id="@tab.Id" Text="@tab.Title" AllowClose="true">
+                    @if (tab.PageNM is not null)
+                    {
+                        <DynamicComponent Type="@Type.GetType(tab.PageNM)" />
+                    }
+                </DxTabPage>
+            }
+        </DxTabs>        
+    </div>
+}
+else
+{
+    <div class="p-4">
+        <h3>Welcome!</h3>
+        <p>Please select a menu item to open a tab.</p>
+    </div>
+}
+
+@* <DxContextMenu @ref=menu>
+    <Items>
+        <DxContextMenuItem Click="CloseTab" Text="Close"></DxContextMenuItem>
+        <DxContextMenuItem Click="CloseAllTabs" Text="Close All Tabs"></DxContextMenuItem>
+        <DxContextMenuItem Click="CloseOtherTabs" Text="Close Other Tabs"></DxContextMenuItem>
+        <DxContextMenuItem Click="RestoreAllTabs" Text="Restore Closed Tabs"></DxContextMenuItem>
+    </Items>
+</DxContextMenu> *@
+
+@code {
+    int ActiveTabIndex
+    {
+        get => MdiStateService.ActiveTabIndex;
+        set => MdiStateService.SetActiveTab(value);
+    }
+
+    protected override void OnInitialized()
+    {
+        MdiStateService.OnChange += StateHasChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
+        if(firstRender) {
+            // collection = new MDITabCollection(tabs!.GetOrderedTabs());
+            // await InvokeAsync(StateHasChanged);
+        }
+
+        // var dotNetInstance = DotNetObjectReference.Create(this);
+        // foreach(ITabInfo tab in tabs!.GetOrderedTabs()) {
+        //     await JS.InvokeVoidAsync("addContextMenuHandler", divContainer, tab.CssClass, MdiStateService.GetTabTextByTabInfo(tab), dotNetInstance);
+        // }
+
+        // if(isReordering) {
+        //     await StateHelper.SaveLayoutToLocalStorageAsync(collection);
+        //     isReordering = false;
+        // }
+    }
+
+    void OnTabClosing(TabCloseEventArgs e)
+    {
+        var indexToClose = MdiStateService.OpenTabs.FindIndex(t => t.Id == e.TabInfo.Id.ToString());
+        if (indexToClose != -1)
+        {
+            MdiStateService.CloseTab(indexToClose);
+        }
+    }
+
+    private async Task OnTabReordering(TabReorderEventArgs e)
+    {
+        // var vi1 = collection.GetVisibleIndexByTabText(e.FromTabInfo.Text);
+        // var vi2 = collection.GetVisibleIndexByTabText(e.ToTabInfo.Text);
+        // collection.SetVisibleIndexByTabText(e.FromTabInfo.Text, vi2);
+        // collection.SetVisibleIndexByTabText(e.ToTabInfo.Text, vi1);
+        // isReordering = true;
+    }
+
+    public void Dispose()
+    {
+        MdiStateService.OnChange -= StateHasChanged;
+    }
+
+
+    private DxTabs? tabs;
+
+    private ElementReference divContainer;
+    private DxContextMenu? menu;
+
+
+    private string? clickedTabText;
+
+    // [JSInvokable]
+    // public async Task ShowContextMenu(MouseEventArgs e, string tabText)
+    // {
+    //     clickedTabText = tabText;
+    //     if (menu != null)
+    //     {
+    //         await menu.ShowAsync(e);
+    //     }
+    // }
+
+    // #region DxContextMenuItem.Click Event Handlers
+
+    // private async Task CloseTab()
+    // {
+    //     // collection.SetVisibleByTabText(clickedTabText, false);
+    //     // await StateHelper.SaveLayoutToLocalStorageAsync(collection);
+    //     //MdiStateService.CloseTab(clickedTabText);
+    // }
+
+    // private async Task CloseAllTabs()
+    // {
+    //     // collection.SetVisibleAllTabs(false);
+    //     // await StateHelper.SaveLayoutToLocalStorageAsync(collection);
+    //     //collection.CloseAllTabs();
+    // }
+
+    // private async Task CloseOtherTabs()
+    // {
+    //     // collection.SetVisibleAllTabs(false);
+    //     // collection.SetVisibleByTabText(clickedTabText, true);
+    //     // await StateHelper.SaveLayoutToLocalStorageAsync(collection);
+    // }
+
+    // private async Task RestoreAllTabs()
+    // {
+    //     // collection.SetVisibleAllTabs(true);
+    //     // await StateHelper.SaveLayoutToLocalStorageAsync(collection);
+    // }
+
+    // #endregion
+}

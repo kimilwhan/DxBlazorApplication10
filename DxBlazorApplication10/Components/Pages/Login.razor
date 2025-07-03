@@ -1,0 +1,82 @@
+﻿@* @page "/login"
+@layout LoginLayout *@
+@attribute [AllowAnonymous]
+@inject AuthService AuthService
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<div class="card shadow-sm" style="width: 25rem;">
+    <div class="card-header">
+        <h4 class="my-2">로그인</h4>
+    </div>
+    <div class="card-body">
+        <EditForm Model="@_loginModel" OnValidSubmit="HandleLogin">
+            @* <DataAnnotationsValidator /> *@
+
+            <div class="mb-3">
+                <label class="form-label">사용자 이름</label>
+                <DxTextBox  @bind-Text="_loginModel.Username" NullText="사용자 이름을 입력하세요" />
+                @* <ValidationMessage For="@(() => _loginModel.Username)" /> *@
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">비밀번호</label>
+                <DxTextBox @bind-Text="_loginModel.Password" Password="true" NullText="비밀번호를 입력하세요" />
+                @* <ValidationMessage For="@(() => _loginModel.Password)" /> *@
+            </div>
+
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <div class="alert alert-danger" role="alert">
+                    @_errorMessage
+                </div>
+            }
+
+            <DxButton SubmitFormOnClick="true" Text="로그인" RenderStyle="ButtonRenderStyle.Primary" CssClass="w-100" />
+        </EditForm>
+    </div>
+    <div class="card-footer text-muted text-center">
+        <small>테스트 계정: admin / 1234 또는 user / 1234</small>
+    </div>
+</div>
+
+
+@code {
+    [SupplyParameterFromQuery(Name = UrlGenerator.ToggleSidebarName)]
+    public bool ToggledSidebar { get; set; }
+
+    private readonly LoginModel _loginModel = new();
+    private string? _errorMessage;
+
+    private async Task HandleLogin()
+    {
+        _errorMessage = null;
+        // AuthService를 통해 로그인을 시도하고 토큰을 받습니다.
+        var token = await AuthService.LoginAsync(_loginModel.Username, _loginModel.Password);
+
+        if (!string.IsNullOrEmpty(token))
+        {
+            // 토큰을 받으면, AuthenticationStateProvider를 통해 사용자를 인증된 상태로 만듭니다.
+            var tokenAuthStateProvider = (TokenAuthenticationStateProvider)AuthenticationStateProvider;
+            tokenAuthStateProvider.MarkUserAsAuthenticated(token);
+
+            // 로그인 성공 시 메인 페이지로 이동
+            // forceLoad: false 로 설정하여 SPA 동작을 유지합니다.
+            NavigationManager.NavigateTo("/");
+        }
+        else
+        {
+            _errorMessage = "사용자 이름 또는 비밀번호가 올바르지 않습니다.";
+        }
+    }
+
+    // 로그인 폼 데이터 모델
+    public class LoginModel
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "사용자 이름을 입력해야 합니다.")]
+        public string Username { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "비밀번호를 입력해야 합니다.")]
+        public string Password { get; set; } = string.Empty;
+    }
+}

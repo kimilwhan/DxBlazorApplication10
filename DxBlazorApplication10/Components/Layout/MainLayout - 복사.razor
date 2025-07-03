@@ -1,0 +1,79 @@
+﻿@inherits LayoutComponentBase
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<AuthorizeView>
+    <Authorized>
+
+<div class="page">
+    <Drawer DrawerHeader="drawerHeader" DrawerFooter="drawerFooter">
+        <DrawerBody>
+            <div class="w-100">
+                <NavMenu></NavMenu>
+            </div>
+        </DrawerBody>
+        <DrawerTarget>
+            <div class="nav-buttons-container">
+                <NavLink href="@UrlGenerator.GetUrl(new Uri(NavigationManager.Uri).LocalPath, !ToggledSidebar)">
+                    <DxButton RenderStyle="@ButtonRenderStyle.Dark" RenderStyleMode="@ButtonRenderStyleMode.Text" CssClass="menu-button" IconCssClass="icon icon-menu"></DxButton>
+                </NavLink>
+                @if (new Uri(NavigationManager.Uri).LocalPath != "/") {
+                    <NavLink href="@UrlGenerator.GetUrl("/", ToggledSidebar)" class="button-link hidden">
+                                <DxButton RenderStyle="@ButtonRenderStyle.Dark" Text="Back to Home" RenderStyleMode="@ButtonRenderStyleMode.Text" CssClass="menu-button-nav" IconCssClass="icon icon-back"></DxButton>
+                    </NavLink>
+                }
+                @* AuthorizeView를 사용하여 인증된 사용자에게만 이메일과 로그아웃 버튼을 표시 *@
+                <div class="d-flex align-items-center">
+                    @* AuthorizeView를 사용하여 인증된 사용자에게만 이메일과 로그아웃 버튼을 표시 *@
+                    @* <AuthorizeView>
+                        <Authorized> *@
+                            <span class="me-2">안녕하세요, @context.User.Identity?.Name 님!</span>
+                            <DxButton Text="로그아웃" Click="Logout" RenderStyle="ButtonRenderStyle.Secondary" />
+                        @* </Authorized>
+                    </AuthorizeView> *@
+                </div>
+            </div>
+            <div class="p-4">
+                @Body
+            </div>
+        </DrawerTarget>
+    </Drawer>
+</div>
+    </Authorized>
+    <NotAuthorized>
+        <div class="page">
+            <BlazorApp.Components.Pages.Login></BlazorApp.Components.Pages.Login>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    [SupplyParameterFromQuery(Name = UrlGenerator.ToggleSidebarName)]
+    public bool ToggledSidebar { get; set; }
+
+    private RenderFragment drawerHeader => @<div class="navigation-drawer-header">
+        <img class="logo" src="images/logo.svg" alt="DevExpress logo" />
+        <NavLink href="@UrlGenerator.GetUrl(new Uri(NavigationManager.Uri).LocalPath, !ToggledSidebar)">
+            <DxButton RenderStyle="@ButtonRenderStyle.Light" RenderStyleMode="@ButtonRenderStyleMode.Text" CssClass="menu-button-nav" IconCssClass="@(ToggledSidebar ? "icon icon-close" : "icon icon-menu")"></DxButton>
+        </NavLink>
+    </div>;
+
+    private RenderFragment drawerFooter => @<div>
+        <NavLink href="https://docs.devexpress.com/Blazor/400725/blazor-components" class="button-link">
+            <DxButton Text="Docs" RenderStyleMode="@ButtonRenderStyleMode.Text" CssClass="footer-button" RenderStyle="@ButtonRenderStyle.Light" IconCssClass="icon docs-icon"></DxButton>
+        </NavLink>
+        <NavLink href="https://demos.devexpress.com/blazor/" class="button-link">
+            <DxButton Text="Demos" RenderStyleMode="@ButtonRenderStyleMode.Text" CssClass="footer-button" RenderStyle="@ButtonRenderStyle.Light" IconCssClass="icon demos-icon"></DxButton>
+        </NavLink>
+    </div>;
+
+    private void Logout()
+    {
+        // AuthenticationStateProvider를 통해 로그아웃 상태로 변경
+        var tokenAuthStateProvider = (TokenAuthenticationStateProvider)AuthenticationStateProvider;
+        tokenAuthStateProvider.MarkUserAsLoggedOut();
+
+        // 로그아웃 후 로그인 페이지로 이동
+        NavigationManager.NavigateTo("/login");
+    }
+}

@@ -1,0 +1,75 @@
+﻿@* @rendermode InteractiveServer *@
+@using BlazorApp.Models
+@using BlazorApp.Components.Pages
+@using BlazorApp.Services
+@inject MdiStateService MdiStateService
+@inject IDapperService DapperService
+@rendermode InteractiveServer
+
+﻿<div id="sidebar">
+    @* <DxMenu Orientation="@Orientation.Vertical" CssClass="menu">
+        <Items>
+            <DxMenuItem NavigateUrl="/" Text="Home" CssClass="menu-item" IconCssClass="icon home-icon"></DxMenuItem>
+            <DxMenuItem NavigateUrl="/counter" Text="Counter" CssClass="menu-item" IconCssClass="icon counter-icon"></DxMenuItem>
+            <DxMenuItem NavigateUrl="/weather" Text="Weather" CssClass="menu-item" IconCssClass="icon weather-icon"></DxMenuItem>                                    
+        </Items>
+    </DxMenu> *@
+    @* <DxMenu Data="@DataSource"
+            Orientation="@Orientation.Vertical" CssClass="menu"
+            ItemClick="@OnMenuItemClick">
+        <DataMappings>
+            <DxMenuDataMapping Text="@nameof(MenuItem.Text)"
+                               CssClass="menu-item"
+                               IconCssClass="@nameof(MenuItem.IconCssClass)" />
+        </DataMappings>
+    </DxMenu> *@
+    <DxMenu Data="menuItems"
+            ItemClick="OnMenuItemClick" Orientation="@Orientation.Vertical" CssClass="menu">
+        <DataMappings>
+            <DxMenuDataMapping
+                Name="MenuCD"
+                Text="MenuNM"
+                CssClass="CssClass"
+                IconCssClass="IconCssClass"
+            />
+        </DataMappings>
+    </DxMenu>
+</div>
+
+@code {
+    [Parameter]
+    public EventCallback<MenuItemClickEventArgs> ItemClick { get; set; }
+
+    // IEnumerable<MenuItem> DataSource { get; set; } = new List<MenuItem>();
+
+    List<MDIMenu> menuItems = new List<MDIMenu>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // DataSource = new List<MenuItem> {
+        //     //new() { Text = "Home", IconCssClass = "oi oi-home", PageComponentType = typeof(Home) },
+        //     new() { Text = "Counter", IconCssClass = "oi oi-plus", PageComponentType = typeof(Counter) },
+        //     new() { Text = "Weather", IconCssClass = "oi oi-list-rich", PageComponentType = typeof(Weather) }
+        // };
+
+        var sql = @"SELECT MenuID, MenuCD, MenuNM, PageNM, CssClass, IconCssClass, ParentID FROM Menus";
+        var result = await DapperService.QueryAsync<MDIMenu>(sql);
+        menuItems.AddRange(result.ToList());
+
+        //MdiStateService.OpenTab("Counter", typeof(Counter));
+    }
+
+    private MDITabCollection collection = new MDITabCollection();
+
+    void OnMenuItemClick(MenuItemClickEventArgs e)
+    {
+        // if (e.ItemInfo.Data is MenuItem menuItem && menuItem.PageComponentType != null)
+        // {
+        //     MdiStateService.OpenTab(menuItem.Text, menuItem.PageComponentType);
+        // }               
+        if (e.ItemInfo.Data is MDIMenu menuItem && menuItem.PageNM != null)
+        {
+            MdiStateService.OpenTab(menuItem.MenuID.ToString(), menuItem.MenuNM, menuItem.PageNM);
+        }
+    }
+}
