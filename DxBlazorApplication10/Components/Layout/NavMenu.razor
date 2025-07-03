@@ -69,7 +69,7 @@
         // }               
         if (e.ItemInfo.Data is MDIMenu menuItem && menuItem.PageNM != null)
         {
-            MdiStateService.OpenTab(menuItem.MenuID.ToString(), menuItem.MenuNM, menuItem.PageNM);
+            MdiStateService.OpenTab(menuItem.MenuCD.ToString(), menuItem.MenuNM, menuItem.PageNM);
         }
     }
 }

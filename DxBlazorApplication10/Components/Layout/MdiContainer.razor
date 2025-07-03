@@ -4,36 +4,88 @@
 @implements IDisposable
 @rendermode InteractiveServer
 
-@if (MdiStateService.OpenTabs.Any())
-{
-    var activeTab = MdiStateService.OpenTabs[ActiveTabIndex];
+<style>
+    .mdi-container {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
 
-    <div @ref=divContainer>
+    .mdi-tabs {
+        flex-shrink: 0; /* 탭 바가 줄어들지 않도록 설정 */
+    }
+
+    .mdi-content-area {
+        flex-grow: 1; /* 남은 공간을 모두 채움 */
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+        border: 1px solid #dee2e6;
+        border-top: none;
+    }
+
+    .no-tabs-message {
+        justify-content: center;
+        align-items: center;
+        color: #6c757d;
+        font-size: 1.2rem;
+    }
+</style>
+
+@* @if (MdiStateService.OpenTabs.Any())
+{ *@
+    @* var activeTab = MdiStateService.OpenTabs[ActiveTabIndex]; *@
+
+<div @ref=divContainer class="mdi-container" style="width:100%; height:100%">
         <DxTabs @ref=tabs @bind-ActiveTabIndex ="@ActiveTabIndex"
                 AllowTabReorder="true"
                 TabReordering="OnTabReordering"
                 TabClosing="@OnTabClosing"
-                RenderMode="TabsRenderMode.AllTabs">
+                RenderMode="TabsRenderMode.AllTabs"
+                CssClass="mdi-tabs">
+
+                <TabsBarTemplate>
+                <div class="custom-tabs-bar">
+                    <DxTabsHeader />
+                    
+                </div>
+            </TabsBarTemplate>
+
+
             @foreach (var tab in MdiStateService.OpenTabs)
             {
                 @* <DxTab Id="@tab.Id" Text="@tab.Title" AllowClose="true" /> *@
                 <DxTabPage Id="@tab.Id" Text="@tab.Title" AllowClose="true">
+                    <Content>
+                    <div class="mdi-content-area">
                     @if (tab.PageNM is not null)
                     {
-                        <DynamicComponent Type="@Type.GetType(tab.PageNM)" />
+                        var componentType = Type.GetType(tab.PageNM);
+                        if (componentType != null)
+                        {
+                            <DynamicComponent Type="@componentType" />
+                        }
+                        else
+                        {
+                            <div class="alert alert-danger" role="alert">
+                                오류: '@tab.PageNM' 페이지를 찾을 수 없습니다.
+                            </div>
+                        }
                     }
+                    </div>
+                </Content>
                 </DxTabPage>
-            }
+            }            
         </DxTabs>        
     </div>
-}
+@* }
 else
 {
     <div class="p-4">
         <h3>Welcome!</h3>
         <p>Please select a menu item to open a tab.</p>
     </div>
-}
+} *@
 
 @* <DxContextMenu @ref=menu>
     <Items>
@@ -75,11 +127,18 @@ else
 
     void OnTabClosing(TabCloseEventArgs e)
     {
-        var indexToClose = MdiStateService.OpenTabs.FindIndex(t => t.Id == e.TabInfo.Id.ToString());
-        if (indexToClose != -1)
-        {
-            MdiStateService.CloseTab(indexToClose);
-        }
+        // var indexToClose = MdiStateService.OpenTabs.FindIndex(t => t.Id == e.TabInfo.Id.ToString());
+        // if (indexToClose != -1)
+        // {
+        //     MdiStateService.CloseTab(indexToClose);
+        // 
+
+        
+        MdiStateService.CloseTabID(e.TabInfo.Id);
+
+        // DevExpress의 기본 닫기 동작을 막고, MdiStateService의 로직만 사용합니다.
+        e.Cancel = true;
+
     }
 
     private async Task OnTabReordering(TabReorderEventArgs e)
