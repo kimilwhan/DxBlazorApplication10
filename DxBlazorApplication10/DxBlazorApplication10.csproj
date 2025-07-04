@@ -7,6 +7,9 @@
     <RootNamespace>BlazorApp</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <Content Remove="Components\Layout\MdiContainer - 복사.razor" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Dapper" Version="2.1.66" />
     <PackageReference Include="DevExpress.Blazor" Version="24.2.7" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.17" />

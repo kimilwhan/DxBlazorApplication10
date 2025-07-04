@@ -8,6 +8,7 @@ namespace BlazorApp.Services
         public event Action? OnChange;
 
         public List<MDITab2> OpenTabs { get; } = new();
+        public List<MDITab2> PopupWindows { get; } = new();
         public int ActiveTabIndex { get; private set; }
 
         public void OpenTab(string title, Type componentType)
@@ -35,22 +36,25 @@ namespace BlazorApp.Services
 
         public void OpenTab(string tabId, string title, string componentPath)
         {
-            //var tabId = title;
-            var existingTab = OpenTabs.FindIndex(t => t.Id == tabId);
+            var existingTab = OpenTabs.Find(t => t.Id == tabId) ?? PopupWindows.Find(t => t.Id == tabId);
 
-            if (existingTab != -1)
+            if (existingTab != null)
             {
-                ActiveTabIndex = existingTab;
+                if (existingTab.IsPopup)
+                    AttachPopupToTab(existingTab.Id);
+                else
+                    SetActiveTab(OpenTabs.IndexOf(existingTab));
             }
             else
             {
-                OpenTabs.Add(new MDITab2
+                var newTab = new MDITab2
                 {
                     Id = tabId,
                     Title = title,
                     ComponentType = typeof(Nullable),
                     PageNM = componentPath
-                });
+                };
+                OpenTabs.Add(newTab);
                 ActiveTabIndex = OpenTabs.Count - 1;
             }
             NotifyStateHasChanged();
@@ -79,25 +83,54 @@ namespace BlazorApp.Services
         public void CloseTabID(string tabId)
         {
             var tabToClose = OpenTabs.FirstOrDefault(t => t.Id == tabId);
-            if (tabToClose == null) return;
-
-            int indexToClose = OpenTabs.IndexOf(tabToClose);
-
-            // 탭을 리스트에서 제거
-            OpenTabs.Remove(tabToClose);
-
-            // 활성 탭 인덱스 조정
-            if (OpenTabs.Count == 0)
+            if (tabToClose != null)
             {
-                ActiveTabIndex = 0;
+                int indexToClose = OpenTabs.IndexOf(tabToClose);
+                OpenTabs.Remove(tabToClose);
+                if (ActiveTabIndex >= indexToClose && ActiveTabIndex > 0)
+                {
+                    ActiveTabIndex--;
+                }
             }
-            else if (ActiveTabIndex >= indexToClose)
+            else
             {
-                // 닫힌 탭이 현재 활성 탭이거나 그 앞 탭이었다면, 인덱스를 하나 줄임
-                // 단, 0보다 작아지지 않도록 보정
-                ActiveTabIndex = Math.Max(0, ActiveTabIndex - 1);
+                var popupToClose = PopupWindows.FirstOrDefault(p => p.Id == tabId);
+                if (popupToClose != null)
+                {
+                    PopupWindows.Remove(popupToClose);
+                }
             }
 
+            NotifyStateHasChanged();
+        }
+
+        // 탭을 팝업으로 전환
+        public void DetachTabToPopup(string tabId)
+        {
+            var tabToDetach = OpenTabs.FirstOrDefault(t => t.Id == tabId);
+            if (tabToDetach == null) return;
+
+            tabToDetach.IsPopup = true;
+            OpenTabs.Remove(tabToDetach);
+            PopupWindows.Add(tabToDetach);
+
+            if (ActiveTabIndex >= OpenTabs.Count && OpenTabs.Count > 0)
+            {
+                ActiveTabIndex = OpenTabs.Count - 1;
+            }
+            NotifyStateHasChanged();
+        }
+
+        // 팝업을 탭으로 전환
+        public void AttachPopupToTab(string tabId)
+        {
+            var popupToAttach = PopupWindows.FirstOrDefault(p => p.Id == tabId);
+            if (popupToAttach == null) return;
+
+            popupToAttach.IsPopup = false;
+            PopupWindows.Remove(popupToAttach);
+            OpenTabs.Add(popupToAttach);
+            ActiveTabIndex = OpenTabs.Count - 1; // 새로 추가된 탭을 활성화
             NotifyStateHasChanged();
         }
 

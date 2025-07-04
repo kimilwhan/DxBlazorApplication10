@@ -9,19 +9,28 @@
         display: flex;
         flex-direction: column;
         height: 100%;
+        width: 100%; /* 컨테이너가 부모의 전체 너비를 차지하도록 명시적으로 설정 */
     }
 
-    .mdi-tabs {
-        flex-shrink: 0; /* 탭 바가 줄어들지 않도록 설정 */
+    .mdi-tabs-bar-container {
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
+        padding: 0 0.5rem;
+        border-bottom: 1px solid #dee2e6;
+        background-color: #f8f9fa;
     }
+
+         .mdi-tabs-bar-container .dx-tabs {
+            flex-grow: 1;
+            border-bottom: none;
+            min-width: 0; /* 탭이 많아질 때 DxTabs가 무한정 늘어나는 것을 방지하고 내부 스크롤이 생기도록 함 */
+        }
 
     .mdi-content-area {
-        flex-grow: 1; /* 남은 공간을 모두 채움 */
-        display: flex;
-        flex-direction: column;
-        overflow-y: auto;
-        border: 1px solid #dee2e6;
-        border-top: none;
+        flex-grow: 1;
+        overflow-y: auto; /* 내용이 많아지면 세로 스크롤바를 자동으로 표시 */
+        padding: 1rem; /* 콘텐츠 영역에 여백 추가 */
     }
 
     .no-tabs-message {
@@ -29,63 +38,149 @@
         align-items: center;
         color: #6c757d;
         font-size: 1.2rem;
+        border: 1px solid #dee2e6;
+        border-top: none;
+        display: flex;
+    }
+
+    .tab-template {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .tab-action-button {
+        margin-left: 0.5rem;
+        padding: 0.1rem 0.3rem;
+        line-height: 1;
+    }
+
+    .tab-list-combobox {
+        width: 200px;
+        flex-shrink: 0;
+        /*margin-left: auto; /* 콤보박스를 항상 오른쪽 끝으로 밀어냄 */
+    }
+
+    .popup-header-template {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
     }
 </style>
 
-@* @if (MdiStateService.OpenTabs.Any())
-{ *@
-    @* var activeTab = MdiStateService.OpenTabs[ActiveTabIndex]; *@
-
-<div @ref=divContainer class="mdi-container" style="width:100%; height:100%">
-        <DxTabs @ref=tabs @bind-ActiveTabIndex ="@ActiveTabIndex"
+<div class="mdi-container">
+    <div class="mdi-tabs-bar-container">
+        <DxTabs @ref="Tabs"                
                 AllowTabReorder="true"
                 TabReordering="OnTabReordering"
                 TabClosing="@OnTabClosing"
+                ActiveTabIndex="MdiStateService.ActiveTabIndex"
+                ActiveTabIndexChanged="OnActiveTabIndexChanged"
                 RenderMode="TabsRenderMode.AllTabs"
-                CssClass="mdi-tabs">
-
-                <TabsBarTemplate>
-                <div class="custom-tabs-bar">
-                    <DxTabsHeader />
-                    
-                </div>
-            </TabsBarTemplate>
-
+                ScrollMode="TabsScrollMode.Auto"
+                CssClass="dx-tabs">
 
             @foreach (var tab in MdiStateService.OpenTabs)
             {
-                @* <DxTab Id="@tab.Id" Text="@tab.Title" AllowClose="true" /> *@
-                <DxTabPage Id="@tab.Id" Text="@tab.Title" AllowClose="true">
-                    <Content>
-                    <div class="mdi-content-area">
-                    @if (tab.PageNM is not null)
-                    {
-                        var componentType = Type.GetType(tab.PageNM);
-                        if (componentType != null)
-                        {
-                            <DynamicComponent Type="@componentType" />
-                        }
-                        else
-                        {
-                            <div class="alert alert-danger" role="alert">
-                                오류: '@tab.PageNM' 페이지를 찾을 수 없습니다.
-                            </div>
-                        }
-                    }
-                    </div>
-                </Content>
+                <DxTabPage @key="tab.Id" Id="@tab.Id" Text="@tab.Title" AllowClose="true">
+                    <TextTemplate >
+                        <div class="tab-template">
+                            <span class="oi oi-document" aria-hidden="true"></span>
+                            <span>@tab.Title</span>
+                            <DxButton CssClass="tab-action-button" Click="@(() => MdiStateService.DetachTabToPopup(tab.Id))" RenderStyle="ButtonRenderStyle.Secondary" SizeMode="SizeMode.Small" title="팝업으로 전환"
+                                      Context="tabactionbutton">
+                                <span class="oi oi-action-undo"></span>
+                            </DxButton>
+                        </div>
+                    </TextTemplate>
                 </DxTabPage>
-            }            
-        </DxTabs>        
+            }
+        </DxTabs>
+
+        <DxComboBox Data="@MdiStateService.OpenTabs"
+                    TextFieldName="Title"
+                    Value="@ActiveTab"           
+                    ValueChanged="@((MDITab2 newValue) => OnActiveTabChangedByComboBox(newValue))"
+                    CssClass="tab-list-combobox"
+                    NullText="열린 탭 목록..."
+                    ReadOnly="@(!MdiStateService.OpenTabs.Any())" />
     </div>
-@* }
-else
+
+    <div class="mdi-content-area">
+        @if (MdiStateService.OpenTabs.Any() && ActiveTab != null)
+        {
+            var tab = ActiveTab;
+
+            if (string.IsNullOrEmpty(tab.PageNM))
+            {
+                <div class="alert alert-warning m-3" role="alert">
+                    이 탭에 대해 표시할 페이지가 지정되지 않았습니다.
+                </div>
+            }
+            else
+            {
+                var componentType = Type.GetType(tab.PageNM);
+                if (componentType != null)
+                {
+                    <DynamicComponent Type="@componentType" />
+                }
+                else
+                {
+                    <div class="alert alert-danger m-3" role="alert">
+                        오류: '@tab.PageNM' 페이지를 찾을 수 없습니다.
+                    </div>
+                }
+            }
+        }
+        @* else
+        {
+            <div class="no-tabs-message">
+                <span>열린 탭이 없습니다. 메뉴에서 항목을 선택하여 시작하세요.</span>
+            </div>
+        } *@
+    </div>
+</div>
+
+@* 팝업으로 전환된 창들을 렌더링하는 부분 *@
+@foreach (var popup in MdiStateService.PopupWindows)
 {
-    <div class="p-4">
-        <h3>Welcome!</h3>
-        <p>Please select a menu item to open a tab.</p>
-    </div>
-} *@
+    <DxPopup @key="popup.Id"
+             Visible="true"
+             Width="800px"
+             Height="600px"
+             ShowCloseButton="false"
+             HeaderText="@popup.Title">
+        <HeaderContentTemplate Context="HeaderContentTemplate">
+            <div class="popup-header-template">
+                <span>@popup.Title</span>
+                <div>
+                    <DxButton Click="@(() => MdiStateService.AttachPopupToTab(popup.Id))" RenderStyle="ButtonRenderStyle.Secondary" SizeMode="SizeMode.Small" title="탭으로 되돌리기">
+                        <span class="oi oi-action-redo"></span>
+                    </DxButton>
+                    <DxButton Click="@(() => MdiStateService.CloseTabID(popup.Id))" RenderStyle="ButtonRenderStyle.Danger" SizeMode="SizeMode.Small" title="닫기" CssClass="ms-2">
+                        <span class="oi oi-x"></span>
+                    </DxButton>
+                </div>
+            </div>
+        </HeaderContentTemplate>
+        <Content>
+            @{
+                var componentType = Type.GetType(popup.PageNM);
+                if (componentType != null)
+                {
+                    <DynamicComponent Type="@componentType" />
+                }
+                else
+                {
+                    <div class="alert alert-danger m-3" role="alert">
+                        오류: '@popup.PageNM' 페이지를 찾을 수 없습니다.
+                    </div>
+                }
+            }
+        </Content>
+    </DxPopup>
+}
 
 @* <DxContextMenu @ref=menu>
     <Items>
@@ -97,48 +192,35 @@ else
 </DxContextMenu> *@
 
 @code {
-    int ActiveTabIndex
-    {
-        get => MdiStateService.ActiveTabIndex;
-        set => MdiStateService.SetActiveTab(value);
-    }
+    private DxTabs Tabs { get; set; }
+    private MDITab2 ActiveTab { get; set; }
 
     protected override void OnInitialized()
     {
-        MdiStateService.OnChange += StateHasChanged;
+        MdiStateService.OnChange += UpdateActiveTab;
+        UpdateActiveTab();
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender) {
-        if(firstRender) {
-            // collection = new MDITabCollection(tabs!.GetOrderedTabs());
-            // await InvokeAsync(StateHasChanged);
-        }
-
-        // var dotNetInstance = DotNetObjectReference.Create(this);
-        // foreach(ITabInfo tab in tabs!.GetOrderedTabs()) {
-        //     await JS.InvokeVoidAsync("addContextMenuHandler", divContainer, tab.CssClass, MdiStateService.GetTabTextByTabInfo(tab), dotNetInstance);
-        // }
-
-        // if(isReordering) {
-        //     await StateHelper.SaveLayoutToLocalStorageAsync(collection);
-        //     isReordering = false;
-        // }
-    }
-
-    void OnTabClosing(TabCloseEventArgs e)
+    private void OnActiveTabIndexChanged(int newIndex)
     {
-        // var indexToClose = MdiStateService.OpenTabs.FindIndex(t => t.Id == e.TabInfo.Id.ToString());
-        // if (indexToClose != -1)
-        // {
-        //     MdiStateService.CloseTab(indexToClose);
-        // 
+        MdiStateService.SetActiveTab(newIndex);
+    }
 
-        
-        MdiStateService.CloseTabID(e.TabInfo.Id);
+    private void OnActiveTabChangedByComboBox(MDITab2 selectedTab)
+    {
+        if (selectedTab != null)
+        {
+            var index = MdiStateService.OpenTabs.IndexOf(selectedTab);
+            MdiStateService.SetActiveTab(index);
+        }
+    }
 
-        // DevExpress의 기본 닫기 동작을 막고, MdiStateService의 로직만 사용합니다.
+    private void OnTabClosing(TabCloseEventArgs e)
+    {
+        //var tabIdToClose = e.TabInfo.Id.ToString();
+        var tabIdToClose = e.TabInfo.Id.ToString();
+        MdiStateService.CloseTabID(tabIdToClose);
         e.Cancel = true;
-
     }
 
     private async Task OnTabReordering(TabReorderEventArgs e)
@@ -150,58 +232,21 @@ else
         // isReordering = true;
     }
 
-    public void Dispose()
+    private void UpdateActiveTab()
     {
-        MdiStateService.OnChange -= StateHasChanged;
+        if (MdiStateService.OpenTabs.Any() && MdiStateService.ActiveTabIndex >= 0 && MdiStateService.ActiveTabIndex < MdiStateService.OpenTabs.Count)
+        {
+            ActiveTab = MdiStateService.OpenTabs[MdiStateService.ActiveTabIndex];
+        }
+        else
+        {
+            ActiveTab = null;
+        }
+        StateHasChanged();
     }
 
-
-    private DxTabs? tabs;
-
-    private ElementReference divContainer;
-    private DxContextMenu? menu;
-
-
-    private string? clickedTabText;
-
-    // [JSInvokable]
-    // public async Task ShowContextMenu(MouseEventArgs e, string tabText)
-    // {
-    //     clickedTabText = tabText;
-    //     if (menu != null)
-    //     {
-    //         await menu.ShowAsync(e);
-    //     }
-    // }
-
-    // #region DxContextMenuItem.Click Event Handlers
-
-    // private async Task CloseTab()
-    // {
-    //     // collection.SetVisibleByTabText(clickedTabText, false);
-    //     // await StateHelper.SaveLayoutToLocalStorageAsync(collection);
-    //     //MdiStateService.CloseTab(clickedTabText);
-    // }
-
-    // private async Task CloseAllTabs()
-    // {
-    //     // collection.SetVisibleAllTabs(false);
-    //     // await StateHelper.SaveLayoutToLocalStorageAsync(collection);
-    //     //collection.CloseAllTabs();
-    // }
-
-    // private async Task CloseOtherTabs()
-    // {
-    //     // collection.SetVisibleAllTabs(false);
-    //     // collection.SetVisibleByTabText(clickedTabText, true);
-    //     // await StateHelper.SaveLayoutToLocalStorageAsync(collection);
-    // }
-
-    // private async Task RestoreAllTabs()
-    // {
-    //     // collection.SetVisibleAllTabs(true);
-    //     // await StateHelper.SaveLayoutToLocalStorageAsync(collection);
-    // }
-
-    // #endregion
+    public void Dispose()
+    {
+        MdiStateService.OnChange -= UpdateActiveTab;
+    }
 }
