@@ -1,5 +1,9 @@
 ﻿using DevExpress.Blazor;
 using BlazorApp.Models;
+using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace BlazorApp.Services
 {
@@ -7,57 +11,109 @@ namespace BlazorApp.Services
     {
         public event Action? OnChange;
 
+        private readonly IJSRuntime _jsRuntime;
+        private readonly NavigationManager _navigationManager;
+
+        // --- 추가된 부분: 새 창으로 열린 탭의 전체 정보를 추적합니다. ---
+        private readonly Dictionary<string, MDITab2> _detachedWindows = new();
+
+        public MdiStateService(IJSRuntime jsRuntime, NavigationManager navigationManager)
+        {
+            _jsRuntime = jsRuntime;
+            _navigationManager = navigationManager;
+        }
+
         public List<MDITab2> OpenTabs { get; } = new();
         public List<MDITab2> PopupWindows { get; } = new();
         public int ActiveTabIndex { get; private set; }
 
-        public void OpenTab(string title, Type componentType)
-        {
-            var tabId = componentType.Name;
-            var existingTab = OpenTabs.FindIndex(t => t.Id == tabId);
+        //public void OpenTab(string title, Type componentType)
+        //{
+        //    var tabId = componentType.Name;
+        //    var existingTab = OpenTabs.FindIndex(t => t.Id == tabId);
 
-            if (existingTab != -1)
-            {
-                ActiveTabIndex = existingTab;
-            }
-            else
-            {
-                OpenTabs.Add(new MDITab2
-                {
-                    Id = tabId,
-                    Title = title,
-                    ComponentType = componentType,
-                    PageNM = ""
-                });
-                ActiveTabIndex = OpenTabs.Count - 1;
-            }
-            NotifyStateHasChanged();
-        }
+        //    if (existingTab != -1)
+        //    {
+        //        ActiveTabIndex = existingTab;
+        //    }
+        //    else
+        //    {
+        //        OpenTabs.Add(new MDITab2
+        //        {
+        //            Id = tabId,
+        //            Title = title,
+        //            ComponentType = componentType,
+        //            PageNM = ""
+        //        });
+        //        ActiveTabIndex = OpenTabs.Count - 1;
+        //    }
+        //    NotifyStateHasChanged();
+        //}
 
         public void OpenTab(string tabId, string title, string componentPath)
         {
-            var existingTab = OpenTabs.Find(t => t.Id == tabId) ?? PopupWindows.Find(t => t.Id == tabId);
+            if (OpenTabs.Any(t => t.Id == tabId))
+            {
+                SetActiveTab(OpenTabs.FindIndex(t => t.Id == tabId));
+                return;
+            }
 
-            if (existingTab != null)
+            if (_detachedWindows.ContainsKey(tabId))
             {
-                if (existingTab.IsPopup)
-                    AttachPopupToTab(existingTab.Id);
-                else
-                    SetActiveTab(OpenTabs.IndexOf(existingTab));
+                _jsRuntime.InvokeVoidAsync("alert", $"'{title}'은(는) 이미 새 창으로 열려 있습니다.");
+                return;
             }
-            else
+
+            var newTab = new MDITab2
             {
-                var newTab = new MDITab2
-                {
-                    Id = tabId,
-                    Title = title,
-                    ComponentType = typeof(Nullable),
-                    PageNM = componentPath
-                };
-                OpenTabs.Add(newTab);
-                ActiveTabIndex = OpenTabs.Count - 1;
-            }
+                Id = tabId,
+                Title = title,
+                ComponentType = typeof(Nullable),
+                PageNM = componentPath
+            };
+            OpenTabs.Add(newTab);
+            SetActiveTab(OpenTabs.Count - 1);
+
             NotifyStateHasChanged();
+        }
+
+        // --- 추가된 메서드: 새 창을 다시 탭으로 전환합니다. ---
+        public void AttachWindowToTab(string tabId)
+        {
+            if (_detachedWindows.TryGetValue(tabId, out var tabToAttach))
+            {
+                _detachedWindows.Remove(tabId);
+                OpenTabs.Add(tabToAttach);
+                SetActiveTab(OpenTabs.Count - 1);
+            }
+        }
+
+        // --- 수정된 메서드: 탭을 새 창으로 전환합니다. ---
+        public async void DetachTabToNewWindow(string tabId)
+        {
+            var tabToDetach = OpenTabs.FirstOrDefault(t => t.Id == tabId);
+            if (tabToDetach == null || string.IsNullOrEmpty(tabToDetach.PageNM)) return;
+
+            _detachedWindows[tabId] = tabToDetach; // 추적 목록에 추가
+            OpenTabs.Remove(tabToDetach);
+
+            // 새 창에서 탭 복원을 위해 필요한 정보를 URL 파라미터로 전달합니다.
+            var componentName = tabToDetach.PageNM;
+            var url = _navigationManager.ToAbsoluteUri($"/PopupPage?componentName={componentName}&tabId={tabId}&title={tabToDetach.Title}").ToString();
+
+            await _jsRuntime.InvokeVoidAsync("openAsPopup", url, tabId);
+
+            NotifyStateHasChanged();
+        }
+
+        // --- 추가된 메서드: 새 창이 닫혔을 때 추적 정보를 삭제합니다. ---
+        public void ClearDetachedWindowInfo(string tabId)
+        {
+            if (_detachedWindows.ContainsKey(tabId))
+            {
+                _detachedWindows.Remove(tabId);
+                // 이 변경 사항은 UI에 직접적인 영향을 주지 않으므로 NotifyStateHasChanged() 호출은 선택 사항입니다.
+            }
         }
 
         public void CloseTab(int index)
@@ -92,14 +148,14 @@ namespace BlazorApp.Services
                     ActiveTabIndex--;
                 }
             }
-            else
-            {
-                var popupToClose = PopupWindows.FirstOrDefault(p => p.Id == tabId);
-                if (popupToClose != null)
-                {
-                    PopupWindows.Remove(popupToClose);
-                }
-            }
+            //else
+            //{
+            //    var popupToClose = PopupWindows.FirstOrDefault(p => p.Id == tabId);
+            //    if (popupToClose != null)
+            //    {
+            //        PopupWindows.Remove(popupToClose);
+            //    }
+            //}
 
             NotifyStateHasChanged();
         }

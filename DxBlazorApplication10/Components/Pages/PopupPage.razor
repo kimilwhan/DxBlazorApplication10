@@ -1,41 +1,26 @@
 ﻿@page "/PopupPage"
+@* @layout EmptyLayout *@
 @using Microsoft.AspNetCore.Components.Web
 @inject IJSRuntime JSRuntime
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8" />
-    <title>@Title</title>
-    <base href="/" />
-    <link rel="stylesheet" href="css/bootstrap/bootstrap.min.css" />
-    <link rel="stylesheet" href="css/site.css" />
-    <link rel="stylesheet" href="_content/DevExpress.Blazor/dx-blazor.css" />
-</head>
-<body>
-    <div class="d-flex justify-content-end p-2 border-bottom">
-        @* --- 추가: '탭으로 되돌리기' 버튼 --- *@
-        <button class="btn btn-secondary btn-sm" @onclick="ReAttachToParent">
-            <span class="oi oi-action-redo"></span> 탭으로 되돌리기
-        </button>
-    </div>
-    <div class="container-fluid p-3">
-        @if (ComponentType != null)
-        {
-            <DynamicComponent Type="@ComponentType" />
-        }
-        else
-        {
-            <div class="alert alert-danger">
-                <strong>오류:</strong> 컴포넌트 '@ComponentName'을(를) 로드할 수 없습니다.
-            </div>
-        }
-    </div>
-
-    <script src="_framework/blazor.server.js"></script>
-    <script src="js/mdi.js"></script>
-</body>
-</html>
+<div class="d-flex justify-content-end p-2 border-bottom bg-light">
+    @* --- 추가된 부분: '탭으로 되돌리기' 버튼 --- *@
+    <button class="btn btn-secondary btn-sm" @onclick="ReAttachToParent">
+        <span class="oi oi-action-redo"></span> 탭으로 되돌리기
+    </button>
+</div>
+<div class="container-fluid p-3">
+    @if (ComponentType != null)
+    {
+        <DynamicComponent Type="@ComponentType" />
+    }
+    else
+    {
+        <div class="alert alert-danger">
+            <strong>오류:</strong> 컴포넌트 '@ComponentName'을(를) 로드할 수 없습니다.
+        </div>
+    }
+</div>
 
 @code {
     [SupplyParameterFromQuery]
@@ -57,9 +42,22 @@
         }
     }
 
-    // --- 추가: 버튼 클릭 시 JavaScript 함수 호출 ---
+    // --- 추가된 부분: 버튼 클릭 시 JavaScript 함수 호출 ---
     private async Task ReAttachToParent()
     {
         await JSRuntime.InvokeVoidAsync("attachToParentTab", TabId);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync("registerUnloadHandler", TabId);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await JSRuntime.InvokeVoidAsync("unregisterUnloadHandler");
     }
 }

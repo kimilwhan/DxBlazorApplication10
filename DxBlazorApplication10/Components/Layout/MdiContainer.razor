@@ -1,6 +1,6 @@
 ﻿@attribute [Authorize]
 @inject MdiStateService MdiStateService
-@inject IJSRuntime JS
+@inject IJSRuntime JSRuntime
 @implements IDisposable
 @rendermode InteractiveServer
 
@@ -88,7 +88,8 @@
                         <div class="tab-template">
                             <span class="oi oi-document" aria-hidden="true"></span>
                             <span>@tab.Title</span>
-                            <DxButton CssClass="tab-action-button" Click="@(() => MdiStateService.DetachTabToPopup(tab.Id))" RenderStyle="ButtonRenderStyle.Secondary" SizeMode="SizeMode.Small" title="팝업으로 전환"
+                            <DxButton CssClass="tab-action-button"
+                                      Click="@(() => MdiStateService.DetachTabToNewWindow(tab.Id))" RenderStyle="ButtonRenderStyle.Secondary" SizeMode="SizeMode.Small" title="팝업으로 전환"
                                       Context="tabactionbutton">
                                 <span class="oi oi-action-undo"></span>
                             </DxButton>
@@ -142,58 +143,36 @@
     </div>
 </div>
 
-@* 팝업으로 전환된 창들을 렌더링하는 부분 *@
-@foreach (var popup in MdiStateService.PopupWindows)
-{
-    <DxPopup @key="popup.Id"
-             Visible="true"
-             Width="800px"
-             Height="600px"
-             ShowCloseButton="false"
-             HeaderText="@popup.Title">
-        <HeaderContentTemplate Context="HeaderContentTemplate">
-            <div class="popup-header-template">
-                <span>@popup.Title</span>
-                <div>
-                    <DxButton Click="@(() => MdiStateService.AttachPopupToTab(popup.Id))" RenderStyle="ButtonRenderStyle.Secondary" SizeMode="SizeMode.Small" title="탭으로 되돌리기">
-                        <span class="oi oi-action-redo"></span>
-                    </DxButton>
-                    <DxButton Click="@(() => MdiStateService.CloseTabID(popup.Id))" RenderStyle="ButtonRenderStyle.Danger" SizeMode="SizeMode.Small" title="닫기" CssClass="ms-2">
-                        <span class="oi oi-x"></span>
-                    </DxButton>
-                </div>
-            </div>
-        </HeaderContentTemplate>
-        <Content>
-            @{
-                var componentType = Type.GetType(popup.PageNM);
-                if (componentType != null)
-                {
-                    <DynamicComponent Type="@componentType" />
-                }
-                else
-                {
-                    <div class="alert alert-danger m-3" role="alert">
-                        오류: '@popup.PageNM' 페이지를 찾을 수 없습니다.
-                    </div>
-                }
-            }
-        </Content>
-    </DxPopup>
-}
-
-@* <DxContextMenu @ref=menu>
-    <Items>
-        <DxContextMenuItem Click="CloseTab" Text="Close"></DxContextMenuItem>
-        <DxContextMenuItem Click="CloseAllTabs" Text="Close All Tabs"></DxContextMenuItem>
-        <DxContextMenuItem Click="CloseOtherTabs" Text="Close Other Tabs"></DxContextMenuItem>
-        <DxContextMenuItem Click="RestoreAllTabs" Text="Restore Closed Tabs"></DxContextMenuItem>
-    </Items>
-</DxContextMenu> *@
-
 @code {
     private DxTabs Tabs { get; set; }
     private MDITab2 ActiveTab { get; set; }
+    private DotNetObjectReference<MdiContainer> objRef;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // 이 컴포넌트의 인스턴스를 JavaScript에서 호출할 수 있도록 등록합니다.
+            objRef = DotNetObjectReference.Create(this);
+            await JSRuntime.InvokeVoidAsync("setMdiContainerHelper", objRef);
+            // --- 추가된 부분: 부모창의 닫힘 이벤트 핸들러를 등록합니다. ---
+            await JSRuntime.InvokeVoidAsync("registerParentUnloadHandler");
+        }
+    }
+
+    // --- 추가: JavaScript에서 호출될 메서드 ---
+    [JSInvokable]
+    public void ReAttachTab(string tabId)
+    {
+        // 서비스의 탭 복원 메서드를 호출합니다.
+        MdiStateService.AttachWindowToTab(tabId);
+    }
+
+    [JSInvokable]
+    public void NotifyPopupWindowClosed(string tabId)
+    {
+        MdiStateService.ClearDetachedWindowInfo(tabId);
+    }
 
     protected override void OnInitialized()
     {
@@ -248,5 +227,16 @@
     public void Dispose()
     {
         MdiStateService.OnChange -= UpdateActiveTab;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        MdiStateService.OnChange -= UpdateActiveTab;
+        if (objRef != null)
+        {
+            // JavaScript에 등록된 참조를 해제하여 메모리 누수를 방지합니다.
+            await JSRuntime.InvokeVoidAsync("setMdiContainerHelper", null);
+            objRef.Dispose();
+        }
     }
 }
