@@ -13,14 +13,16 @@ namespace BlazorApp.Services
 
         private readonly IJSRuntime _jsRuntime;
         private readonly NavigationManager _navigationManager;
+        private readonly ThemeService _themeService;
 
         // --- 추가된 부분: 새 창으로 열린 탭의 전체 정보를 추적합니다. ---
         private readonly Dictionary<string, MDITab2> _detachedWindows = new();
 
-        public MdiStateService(IJSRuntime jsRuntime, NavigationManager navigationManager)
+        public MdiStateService(IJSRuntime jsRuntime, NavigationManager navigationManager, ThemeService themeService)
         {
             _jsRuntime = jsRuntime;
             _navigationManager = navigationManager;
+            _themeService = themeService;
         }
 
         public List<MDITab2> OpenTabs { get; } = new();

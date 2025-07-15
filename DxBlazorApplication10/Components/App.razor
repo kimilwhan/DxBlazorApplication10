@@ -1,5 +1,7 @@
 ﻿@using Microsoft.AspNetCore.Mvc.ViewFeatures
 @inject IFileVersionProvider FileVersionProvider
+@inject ThemeService ThemeService
+@implements IDisposable
 
 <!DOCTYPE html>
 <html lang="en" >
@@ -14,6 +16,10 @@
     @DxResourceManager.RegisterScripts()
     <link href=@AppendVersion("css/site.css") rel="stylesheet" />
     <link href=@AppendVersion("BlazorApp.styles.css") rel="stylesheet" />
+
+    @* --- 수정된 부분: DevExpress 테마 CSS를 동적으로 로드합니다. --- *@
+    <link href="_content/DevExpress.Blazor.Themes/@(ThemeService.CurrentTheme).bs5.css" rel="stylesheet" />
+
     <HeadOutlet @rendermode="InteractiveServer" />
 </head>
 <body>
@@ -25,4 +31,15 @@
 
 @code{
     private string AppendVersion(string path) => FileVersionProvider.AddFileVersionToPath("/", path);
+
+    protected override void OnInitialized()
+    {
+        // ThemeService의 상태 변경을 감지하여 UI를 다시 렌더링합니다.
+        ThemeService.OnThemeChanged += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        ThemeService.OnThemeChanged -= StateHasChanged;
+    }
 }

@@ -51,6 +51,9 @@ builder.Services.AddScoped<AuthenticationStateProvider, TokenAuthenticationState
 builder.Services.AddScoped<MdiStateService>();
 builder.Services.AddScoped<MDIStateHelper>();
 
+// --- 수정된 부분: MdiStateService를 Scoped로 변경하고 ThemeService를 Singleton으로 등록 ---
+builder.Services.AddSingleton<ThemeService>();
+
 builder.Services.AddSingleton<WeatherForecastService>();
 builder.Services.AddMvc();
 

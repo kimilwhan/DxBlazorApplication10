@@ -1,7 +1,11 @@
 ﻿@attribute [Authorize]
 @inject MdiStateService MdiStateService
+@inject ThemeService ThemeService
 @inject IJSRuntime JSRuntime
-@implements IDisposable
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@* @implements IDisposable *@
+@implements IAsyncDisposable
 @rendermode InteractiveServer
 
 <style>
@@ -61,92 +65,206 @@
         /*margin-left: auto; /* 콤보박스를 항상 오른쪽 끝으로 밀어냄 */
     }
 
+     .theme-selector-combobox {
+        width: 150px;
+        flex-shrink: 0;
+    }
+
     .popup-header-template {
         display: flex;
         justify-content: space-between;
         align-items: center;
         width: 100%;
     }
+
+    .user-dropdown-content {
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        width: 250px;
+    }
 </style>
 
-<div class="mdi-container">
-    <div class="mdi-tabs-bar-container">
-        <DxTabs @ref="Tabs"                
-                AllowTabReorder="true"
-                TabReordering="OnTabReordering"
-                TabClosing="@OnTabClosing"
-                ActiveTabIndex="MdiStateService.ActiveTabIndex"
-                ActiveTabIndexChanged="OnActiveTabIndexChanged"
-                RenderMode="TabsRenderMode.AllTabs"
-                ScrollMode="TabsScrollMode.Auto"
-                CssClass="dx-tabs">
 
-            @foreach (var tab in MdiStateService.OpenTabs)
-            {
-                <DxTabPage @key="tab.Id" Id="@tab.Id" Text="@tab.Title" AllowClose="true">
-                    <TextTemplate >
-                        <div class="tab-template">
-                            <span class="oi oi-document" aria-hidden="true"></span>
-                            <span>@tab.Title</span>
-                            <DxButton CssClass="tab-action-button"
-                                      Click="@(() => MdiStateService.DetachTabToNewWindow(tab.Id))" RenderStyle="ButtonRenderStyle.Secondary" SizeMode="SizeMode.Small" title="팝업으로 전환"
-                                      Context="tabactionbutton">
-                                <span class="oi oi-action-undo"></span>
-                            </DxButton>
-                        </div>
-                    </TextTemplate>
-                </DxTabPage>
-            }
-        </DxTabs>
+    <div class="mdi-container">
+        <div class="mdi-tabs-bar-container">
+            <DxTabs @ref="Tabs"                
+                    AllowTabReorder="true"
+                    TabReordering="OnTabReordering"
+                    TabClosing="@OnTabClosing"
+                    ActiveTabIndex="MdiStateService.ActiveTabIndex"
+                    ActiveTabIndexChanged="OnActiveTabIndexChanged"
+                    RenderMode="TabsRenderMode.AllTabs"
+                    ScrollMode="TabsScrollMode.Auto"
+                    CssClass="dx-tabs">
 
-        <DxComboBox Data="@MdiStateService.OpenTabs"
-                    TextFieldName="Title"
-                    Value="@ActiveTab"           
-                    ValueChanged="@((MDITab2 newValue) => OnActiveTabChangedByComboBox(newValue))"
-                    CssClass="tab-list-combobox"
-                    NullText="열린 탭 목록..."
-                    ReadOnly="@(!MdiStateService.OpenTabs.Any())" />
-    </div>
-
-    <div class="mdi-content-area">
-        @if (MdiStateService.OpenTabs.Any() && ActiveTab != null)
-        {
-            var tab = ActiveTab;
-
-            if (string.IsNullOrEmpty(tab.PageNM))
-            {
-                <div class="alert alert-warning m-3" role="alert">
-                    이 탭에 대해 표시할 페이지가 지정되지 않았습니다.
-                </div>
-            }
-            else
-            {
-                var componentType = Type.GetType(tab.PageNM);
-                if (componentType != null)
+                @foreach (var tab in MdiStateService.OpenTabs)
                 {
-                    <DynamicComponent Type="@componentType" />
+                    <DxTabPage @key="tab.Id" Id="@tab.Id" Text="@tab.Title" AllowClose="true">
+                        <TextTemplate >
+                            <div class="tab-template">
+                                <span class="oi oi-document" aria-hidden="true"></span>
+                                <span>@tab.Title</span>
+                                <DxButton CssClass="tab-action-button"
+                                          Click="@(() => MdiStateService.DetachTabToNewWindow(tab.Id))" RenderStyle="ButtonRenderStyle.Secondary" SizeMode="SizeMode.Small" title="팝업으로 전환"
+                                          Context="tabactionbutton">
+                                    <span class="oi oi-action-undo"></span>
+                                </DxButton>
+                            </div>
+                        </TextTemplate>
+                    </DxTabPage>
+                }
+            </DxTabs>
+
+            <DxComboBox Data="@MdiStateService.OpenTabs"
+                        TextFieldName="Title"
+                        Value="@ActiveTab"           
+                        ValueChanged="@((MDITab2 newValue) => OnActiveTabChangedByComboBox(newValue))"
+                        CssClass="tab-list-combobox"
+                        NullText="열린 탭 목록..."
+                        ReadOnly="@(!MdiStateService.OpenTabs.Any())" />
+
+            @* --- 추가된 부분: 테마 선택 콤보박스 --- *@
+            <DxComboBox Data="@Themes"
+                        TextFieldName="Name"
+                        ValueFieldName="Value"
+                        Value="@ThemeService.CurrentTheme"
+                        ValueChanged="@((string newTheme) => OnThemeChanged(newTheme))"
+                        CssClass="theme-selector-combobox" />
+
+            <DxDropDown @bind-IsOpen="@IsOpen"
+                        Width="400"
+                        HeaderVisible="true"
+                        HeaderText="Edit Contact"
+                        FooterVisible="true"
+                        CloseOnOutsideClick="true"
+                    PositionMode="DropDownPositionMode.Bottom"
+                    PositionTarget="#user-dropdown-button-content">
+                <BodyContentTemplate>
+                    <CascadingAuthenticationState>
+                    @* <SampleEditForm /> *@
+                    <div class="user-dropdown-content">
+                        <AuthorizeView>
+                            <Authorized Context="testsdf">
+                                <div class="text-center">
+                                    <strong>@testsdf.User.Identity?.Name</strong>님, 환영합니다.
+                                </div>
+                                <DxButton Text="개인정보 설정" Click="OpenUserSettings" RenderStyle="ButtonRenderStyle.Secondary" />
+                                <DxButton Text="로그아웃" Click="Logout" RenderStyle="ButtonRenderStyle.Danger" />
+                            </Authorized>
+                        </AuthorizeView>
+                    </div>
+                    </CascadingAuthenticationState>                    
+                </BodyContentTemplate>
+                <FooterContentTemplate>
+                    <DxButton RenderStyle="ButtonRenderStyle.Primary" Text="OK" Click="@context.CloseCallback" />
+                    <DxButton RenderStyle="ButtonRenderStyle.Secondary" Text="Cancel" Click="@context.CloseCallback" />
+                </FooterContentTemplate>
+            </DxDropDown>
+            @* <DxDropDown @ref="UserDropDown"
+                        CloseOnOutsideClick="true"
+                        PositionTarget=".user-profile-button"
+                        VerticalAlignment="DropDownVerticalAlignment.Bottom"
+                        HorizontalAlignment="DropDownHorizontalAlignment.Right">
+                
+            </DxDropDown> *@
+        <div id="user-dropdown-button-content">
+                <DxButton CssClass="user-profile-button"
+                          RenderStyle="ButtonRenderStyle.Light"
+                          Click="@(() => IsOpen = true)">
+                    <span class="oi oi-person"></span>
+                </DxButton>
+            </div>
+        </div>
+
+        <div class="mdi-content-area">
+            @if (MdiStateService.OpenTabs.Any() && ActiveTab != null)
+            {
+                var tab = ActiveTab;
+
+                if (string.IsNullOrEmpty(tab.PageNM))
+                {
+                    <div class="alert alert-warning m-3" role="alert">
+                        이 탭에 대해 표시할 페이지가 지정되지 않았습니다.
+                    </div>
                 }
                 else
                 {
-                    <div class="alert alert-danger m-3" role="alert">
-                        오류: '@tab.PageNM' 페이지를 찾을 수 없습니다.
-                    </div>
+                    var componentType = Type.GetType(tab.PageNM);
+                    if (componentType != null)
+                    {
+                        <DynamicComponent Type="@componentType" />
+                    }
+                    else
+                    {
+                        <div class="alert alert-danger m-3" role="alert">
+                            오류: '@tab.PageNM' 페이지를 찾을 수 없습니다.
+                        </div>
+                    }
                 }
             }
-        }
-        @* else
-        {
-            <div class="no-tabs-message">
-                <span>열린 탭이 없습니다. 메뉴에서 항목을 선택하여 시작하세요.</span>
-            </div>
-        } *@
+            @* else
+            {
+                <div class="no-tabs-message">
+                    <span>열린 탭이 없습니다. 메뉴에서 항목을 선택하여 시작하세요.</span>
+                </div>
+            } *@
+        </div>
     </div>
-</div>
 
 @code {
     private DxTabs Tabs { get; set; }
     private MDITab2 ActiveTab { get; set; }
     private DotNetObjectReference<MdiContainer> objRef;
+    private DxDropDown UserDropDown { get; set; }
+    bool IsOpen { get; set; } = false;
+
+    // --- 추가된 부분: 테마 목록 데이터 ---
+    private record ThemeInfo(string Name, string Value);
+    private List<ThemeInfo> Themes = new List<ThemeInfo>
+    {
+        new("Blazing Berry", "blazing-berry"),
+        new("Blazing Dark", "blazing-dark"),
+        new("Office White", "office-white"),
+        new("Purple", "purple")
+
+    };
+
+    // --- 추가된 메서드: 테마 변경 시 페이지를 새로고침합니다. ---
+    private void OnThemeChanged(string newTheme)
+    {
+        ThemeService.SetTheme(newTheme);
+        // 현재 URL로 페이지를 강제 새로고침하여 새 테마를 적용합니다.
+        //=>새로고침 시 로그인 화면으로 전환되어 주석 처리함
+        //NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);
+    }
+
+    private async Task Logout()
+    {
+        // var customAuthStateProvider = (TokenAuthenticationStateProvider)AuthenticationStateProvider;
+        // customAuthStateProvider.MarkUserAsLoggedOut();
+        // await JSRuntime.InvokeVoidAsync("authManager.removeToken");
+        // NavigationManager.NavigateTo("/", forceLoad: true);
+        // AuthenticationStateProvider를 통해 로그아웃 상태로 변경
+        var tokenAuthStateProvider = (TokenAuthenticationStateProvider)AuthenticationStateProvider;
+        tokenAuthStateProvider.MarkUserAsLoggedOut();
+
+        // 로그아웃 후 로그인 페이지로 이동
+        //NavigationManager.NavigateTo("/login");
+        NavigationManager.NavigateTo("/");
+    }
+
+    private void GoToLogin()
+    {
+        NavigationManager.NavigateTo("/login"); // 로그인 페이지 경로
+    }
+
+    private void OpenUserSettings()
+    {
+        // TODO: 개인정보 설정 페이지를 여는 로직 구현
+        // 예: MdiStateService.OpenTab("UserSettings", "개인정보 설정", "BlazorApp.Components.Pages.UserSettings");
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -224,10 +342,10 @@
         StateHasChanged();
     }
 
-    public void Dispose()
-    {
-        MdiStateService.OnChange -= UpdateActiveTab;
-    }
+    // public void Dispose()
+    // {
+    //     MdiStateService.OnChange -= UpdateActiveTab;
+    // }
 
     public async ValueTask DisposeAsync()
     {

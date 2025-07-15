@@ -16,28 +16,12 @@
                     </div>
                 </DrawerBody>
                 <DrawerTarget>
-                    <div class="nav-buttons-container">
+                    @* <div class="nav-buttons-container">
                         <NavLink href="@UrlGenerator.GetUrl(new Uri(NavigationManager.Uri).LocalPath, !ToggledSidebar)">
                             <DxButton RenderStyle="@ButtonRenderStyle.Dark" RenderStyleMode="@ButtonRenderStyleMode.Text" CssClass="menu-button" IconCssClass="icon icon-menu"></DxButton>
-                        </NavLink>
-                        @if (new Uri(NavigationManager.Uri).LocalPath != "/")
-                        {
-                            <NavLink href="@UrlGenerator.GetUrl("/", ToggledSidebar)" class="button-link hidden">
-                                <DxButton RenderStyle="@ButtonRenderStyle.Dark" Text="Back to Home" RenderStyleMode="@ButtonRenderStyleMode.Text" CssClass="menu-button-nav" IconCssClass="icon icon-back"></DxButton>
-                            </NavLink>
-                        }
-                        @* AuthorizeView를 사용하여 인증된 사용자에게만 이메일과 로그아웃 버튼을 표시 *@
-                        <div class="d-flex align-items-center">
-                            @* AuthorizeView를 사용하여 인증된 사용자에게만 이메일과 로그아웃 버튼을 표시 *@
-                            @* <AuthorizeView>
-                        <Authorized> *@
-                            <span class="me-2">안녕하세요, @context.User.Identity?.Name 님!</span>
-                            <DxButton Text="로그아웃" Click="Logout" RenderStyle="ButtonRenderStyle.Secondary" />
-                            @* </Authorized>
-                    </AuthorizeView> *@ 
-                        </div>
-                    </div>
-                    <div class="p-4">
+                        </NavLink>                        
+                    </div> *@
+                    <div class="p-2">
                         <div class="main-content">
                             <MdiContainer />
                         </div>

@@ -3,24 +3,45 @@
 @using Microsoft.AspNetCore.Components.Web
 @inject IJSRuntime JSRuntime
 
-<div class="d-flex justify-content-end p-2 border-bottom bg-light">
-    @* --- 추가된 부분: '탭으로 되돌리기' 버튼 --- *@
-    <button class="btn btn-secondary btn-sm" @onclick="ReAttachToParent">
-        <span class="oi oi-action-redo"></span> 탭으로 되돌리기
-    </button>
-</div>
-<div class="container-fluid p-3">
-    @if (ComponentType != null)
-    {
-        <DynamicComponent Type="@ComponentType" />
-    }
-    else
-    {
-        <div class="alert alert-danger">
-            <strong>오류:</strong> 컴포넌트 '@ComponentName'을(를) 로드할 수 없습니다.
-        </div>
-    }
-</div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@Title</title>
+    <base href="/" />
+    <link rel="stylesheet" href="css/bootstrap/bootstrap.min.css" />
+    <link rel="stylesheet" href="css/site.css" />
+    
+    @* --- 수정된 부분: URL 파라미터로 받은 테마를 적용합니다. --- *@
+    <link href="_content/DevExpress.Blazor.Themes/@(Theme).bs5.css" rel="stylesheet" />
+</head>
+<body>
+
+    <div class="d-flex justify-content-end p-2 border-bottom bg-light">
+        @* --- 추가된 부분: '탭으로 되돌리기' 버튼 --- *@
+        <button class="btn btn-secondary btn-sm" @onclick="ReAttachToParent">
+            <span class="oi oi-action-redo"></span> 탭으로 되돌리기
+        </button>
+    </div>
+    <div class="container-fluid p-3">
+        @if (ComponentType != null)
+        {
+            <DynamicComponent Type="@ComponentType" />
+        }
+        else
+        {
+            <div class="alert alert-danger">
+                <strong>오류:</strong> 컴포넌트 '@ComponentName'을(를) 로드할 수 없습니다.
+            </div>
+        }
+    </div>
+
+    <script src="_framework/blazor.server.js"></script>
+    <script src="js/mdi.js"></script>
+</body>
+</html>
+
 
 @code {
     [SupplyParameterFromQuery]
@@ -31,6 +52,10 @@
 
     [SupplyParameterFromQuery]
     public string Title { get; set; }
+
+    // --- 추가된 부분: 테마 파라미터를 받습니다. ---
+    [SupplyParameterFromQuery]
+    public string Theme { get; set; } = "blazing-berry"; // 기본 테마
 
     private Type ComponentType { get; set; }
 
