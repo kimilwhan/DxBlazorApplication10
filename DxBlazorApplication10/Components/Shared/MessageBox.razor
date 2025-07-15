@@ -1,0 +1,44 @@
+﻿@inject MessageBoxService MsgBoxService
+@implements IDisposable
+
+<DxPopup @bind-Visible="@MsgBoxService.IsVisible"
+         HeaderText="@MsgBoxService.Title"
+         ShowFooter="true"
+         CloseOnEscape="true"
+         CloseOnOutsideClick="false"
+         CssClass="message-box-popup">
+    <BodyContentTemplate>
+        @((MarkupString)MsgBoxService.Message.Replace("\n", "<br/>"))
+    </BodyContentTemplate>
+    <FooterContentTemplate>
+        @if (MsgBoxService.ShowOkCancelButtons)
+        {
+            <DxButton Text="확인" Click="@(() => MsgBoxService.Close(true))" RenderStyle="ButtonRenderStyle.Primary" />
+            <DxButton Text="취소" Click="@(() => MsgBoxService.Close(false))" />
+        }
+        else
+        {
+            <DxButton Text="확인" Click="@(() => MsgBoxService.Close(true))" RenderStyle="ButtonRenderStyle.Primary" />
+        }
+    </FooterContentTemplate>
+</DxPopup>
+
+@code {
+    protected override void OnInitialized()
+    {
+        // 서비스의 상태 변경 이벤트를 구독하여 UI를 업데이트합니다.
+        MsgBoxService.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        // 컴포넌트 소멸 시 구독 해제
+        MsgBoxService.OnChange -= StateHasChanged;
+    }
+}
+
+<style>
+    .message-box-popup {
+        max-width: 400px;
+    }
+</style>

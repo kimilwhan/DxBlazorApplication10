@@ -59,6 +59,11 @@ builder.Services.AddMvc();
 
 builder.Services.AddScoped<IDapperService, DapperService>();
 
+// Scoped로 등록하여 사용자 세션별로 독립적인 툴바 상태를 유지합니다.
+builder.Services.AddScoped<ToolbarStateService>();
+// Scoped로 등록하여 사용자 세션별로 독립적인 메시지 박스 상태를 유지합니다.
+builder.Services.AddScoped<MessageBoxService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

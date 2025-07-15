@@ -1,0 +1,33 @@
+﻿@inherits LayoutComponentBase
+@inject ToolbarStateService ToolbarState
+@implements IDisposable
+
+@* --- 공통 툴바 UI --- *@
+<DxToolbar>
+    <DxToolbarItem Text="조회" IconCssClass="bi bi-search" Click="ToolbarState.OnSearchClick" />
+    <DxToolbarItem Text="저장" IconCssClass="bi bi-save" Click="ToolbarState.OnSaveClick" Enabled="ToolbarState.IsSaveEnabled" />
+    <DxToolbarItem Text="삭제" IconCssClass="bi bi-trash" Click="ToolbarState.OnDeleteClick" />
+</DxToolbar>
+<hr />
+
+@* @Body 대신 ChildContent 파라미터를 사용하여 자식 콘텐츠를 렌더링합니다. *@
+@ChildContent
+
+@code {
+
+    // 자식 콘텐츠를 받기 위한 RenderFragment 파라미터입니다.
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    protected override void OnInitialized()
+    {
+        // 서비스의 상태 변경 이벤트를 구독하여 툴바 UI를 업데이트합니다.
+        ToolbarState.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        // 컴포넌트 소멸 시 구독 해제
+        ToolbarState.OnChange -= StateHasChanged;
+    }
+}
