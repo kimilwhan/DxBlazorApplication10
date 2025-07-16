@@ -1,5 +1,6 @@
-﻿using DevExpress.Blazor;
+﻿using BlazorApp.Components.Layout;
 using BlazorApp.Models;
+using DevExpress.Blazor;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using System.Collections.Generic;
@@ -66,13 +67,40 @@ namespace BlazorApp.Services
                 return;
             }
 
+            var componentType = Type.GetType(componentPath);
+            if (componentType == null)
+            {
+                // 컴포넌트 타입을 찾을 수 없는 경우 처리
+                System.Console.WriteLine($"Error: Component type not found for '{componentPath}'");
+                return;
+            }
+
             var newTab = new MDITab2
             {
                 Id = tabId,
                 Title = title,
                 ComponentType = typeof(Nullable),
-                PageNM = componentPath
+                PageNM = componentPath,
+                Content = builder => { } // 임시 초기화
             };
+
+            // RenderFragment를 동적으로 생성합니다.
+            // 이 RenderFragment는 PageLayout으로 감싸진 실제 페이지 컴포넌트를 포함합니다.
+            newTab.Content = builder =>
+            {
+                builder.OpenComponent(0, typeof(PageLayout));
+                builder.AddAttribute(1, "ChildContent", (RenderFragment)(builder2 => {
+                    builder2.OpenComponent(0, componentType);
+                    // 페이지에 파라미터를 전달해야 할 경우 여기에 추가
+                    // builder2.AddAttribute(1, "ParameterName", parameterValue);
+
+                    // @ref를 통해 컴포넌트 인스턴스를 받아와서 newTab 모델에 저장합니다.
+                    builder2.AddComponentReferenceCapture(2, inst => { newTab.ComponentInstance = inst; });
+                    builder2.CloseComponent();
+                }));
+                builder.CloseComponent();
+            };
+
             OpenTabs.Add(newTab);
             SetActiveTab(OpenTabs.Count - 1);
 
