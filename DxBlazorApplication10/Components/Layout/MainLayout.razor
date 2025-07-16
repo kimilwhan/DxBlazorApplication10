@@ -2,7 +2,12 @@
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
-<div class="page">
+@* 마우스 우클릭 메뉴(컨텍스트 메뉴) 방지 방법
+    이 div가 앱의 모든 콘텐츠를 감싸고 있으므로,
+    여기에 @oncontextmenu 이벤트를 적용하면 앱 전체에 적용됩니다.
+*@
+
+<div class="page" @oncontextmenu="@(e => { })" @oncontextmenu:preventDefault>
 @Body
 </div>
 

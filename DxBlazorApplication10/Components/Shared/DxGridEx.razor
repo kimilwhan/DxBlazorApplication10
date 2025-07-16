@@ -1,0 +1,248 @@
+﻿@using System.ComponentModel
+@* 1. 어떤 데이터 타입이든 받을 수 있도록 제네릭(@typeparam)을 선언합니다. *@
+@typeparam TData
+
+@* 2. 컴팩트 헤더 스타일을 이 컴포넌트의 기본 스타일로 내장합니다. *@
+<style>
+    /* 이 컴포넌트의 고유 ID를 사용하여 다른 그리드에 영향을 주지 않도록 합니다. */
+    # @_componentId .dx-grid-header-cell {
+        padding: 0 4px;
+    }
+
+    # @_componentId .dx-grid-header-cell-content {
+        padding: 4px 0;
+    }
+
+    # @_componentId .dx-grid-filter-button {
+        padding: 2px;
+        margin-left: 2px;
+        font-size: 0.8em;
+    }
+
+    # @_componentId .dx-grid-sort-indicator {
+        font-size: 0.8em;
+        margin-left: 2px;
+    }
+</style>
+
+@* 3. 우클릭 시 표시될 컨텍스트 메뉴를 정의합니다. *@
+<DxContextMenu @ref="ContextMenu">
+    <Items>
+        <DxContextMenuItem Text="열 너비 자동 맞춤" Click="AutoFitColumnWidths" />
+        @if (_filterMenuButtonDisplayMode != GridFilterMenuButtonDisplayMode.Always)
+        {
+            <DxContextMenuItem Text="필터 사용" Click="@(() => OnFilterMenuButtonDisplayMode(true))" />
+        }
+        else
+        {
+            <DxContextMenuItem Text="필터 해제" Click="@(() => OnFilterMenuButtonDisplayMode(false))" />
+            <DxContextMenuItem Text="필터 초기화" Click="OnFilterClear" />
+        }        
+        @* <DxContextMenuItem BeginGroup="true" Text="열 정보" /> *@
+        <DxContextMenuItem Text="내보내기(XLSX)" Click="ExportXlsx_Click" BeginGroup="true" />
+        <DxContextMenuItem Text="내보내기(XLS)" Click="ExportXlsx_Click" />
+        <DxContextMenuItem Text="내보내기(CSV)" Click="ExportXlsx_Click" />
+    </Items>
+</DxContextMenu>
+
+@* 3. 내부 DxGrid 컴포넌트를 정의합니다. *@
+<DxGrid @ref="_grid"
+        Id="@_componentId"
+        Data="@Data"
+        PageSize="@PageSize"
+        ShowFilterRow="@ShowFilterRow"
+        FilterMenuButtonDisplayMode="@_filterMenuButtonDisplayMode"
+        SelectedDataItem="@SelectedDataItem"
+        SelectedDataItemChanged="@OnSelectedDataItemChangedInternal"
+        AllowSelectRowByClick="@AllowSelectRowByClick"
+        @attributes="@UnmatchedAttributes">
+    <Columns>
+        @* --- 1. 여기에 고정된 행 번호 열을 추가합니다. --- *@
+        <DxGridDataColumn Caption="번호"
+            Width="80px"
+            AllowSort="false"
+            FixedPosition="GridColumnFixedPosition.Left">
+            <HeaderCaptionTemplate>
+                <div class="w-100 h-100 d-flex align-items-center"
+                        @oncontextmenu="OnHeaderContextMenu" @oncontextmenu:preventDefault>
+                    번호
+                </div>
+            </HeaderCaptionTemplate>
+            <CellDisplayTemplate>
+                @* 2. context.VisibleIndex를 사용하여 행 번호를 표시합니다. *@
+                @(context.VisibleIndex + 1)
+            </CellDisplayTemplate>
+        </DxGridDataColumn>
+        @* --- 외부에서 정의된 열들이 여기에 렌더링됩니다. --- *@
+        @ColumnsEx
+
+    </Columns>
+</DxGrid>
+
+@code {
+    DxContextMenu? ContextMenu;
+    double ContextMenuX;
+    double ContextMenuY;
+
+    // 헤더에서 우클릭 이벤트가 발생했을 때 실행될 핸들러
+    public void OnHeaderContextMenu(MouseEventArgs e)
+    {
+        ContextMenuX = e.ClientX;
+        ContextMenuY = e.ClientY;
+        ContextMenu?.ShowAsync(ContextMenuX, ContextMenuY);
+    }
+
+    // 필터 초기화
+    void OnFilterClear()
+    {
+        _grid.ClearFilter();
+    }
+
+    void OnFilterMenuButtonDisplayMode(bool Visible = false)
+    {
+        // 필터 메뉴 버튼의 표시 모드를 설정
+        if (Visible)
+        {
+            _filterMenuButtonDisplayMode = GridFilterMenuButtonDisplayMode.Always;
+        }
+        else
+        {
+            _filterMenuButtonDisplayMode = GridFilterMenuButtonDisplayMode.Never;
+            OnFilterClear();    //필터 초기화
+        }
+    }
+
+    async Task ExportXlsx_Click()
+    {
+        await _grid.ExportToXlsxAsync("ExportResult", new GridXlExportOptions()
+        {
+
+            //ExportSelectedRowsOnly = ExportSelectedRowsOnly,
+            CustomizeCell = OnCustomizeCell
+        });
+    }
+
+    void OnCustomizeCell(GridExportCustomizeCellEventArgs args)
+    {
+        if (args.ColumnFieldName == "ContactName" && args.AreaType == DevExpress.Export.SheetAreaType.DataArea)
+            args.Formatting.Font = new DevExpress.Export.XlCellFont() { Italic = true };
+        args.Handled = true;
+    }
+
+    // 내부 DxGrid 인스턴스를 참조하기 위한 변수
+    private DxGrid _grid = null!;
+    // 각 그리드 인스턴스에 고유한 ID를 부여하여 CSS가 겹치지 않도록 함
+    private readonly string _componentId = $"my-grid-{Guid.NewGuid()}";
+
+    // 4. DxGrid의 핵심 속성들을 [Parameter]로 노출시켜 외부에서 전달받습니다.
+    [Parameter]
+    public IEnumerable<TData>? Data { get; set; }
+
+    public RenderFragment? Columns { get; set; }
+
+    // --- 수정된 부분: 외부에서 컬럼 정의를 받기 위한 파라미터 ---
+    [Parameter] 
+    public RenderFragment? ColumnsEx { get; set; }
+
+    [Parameter]
+    public int PageSize { get; set; } = 15; // 기본 페이지 크기 설정
+
+    [Parameter]
+    public bool ShowFilterRow { get; set; } = true; // 필터 행 기본 표시
+
+    [Parameter]
+    public bool AllowSelectRowByClick { get; set; } = true; // 
+
+    [DefaultValue(GridSelectionMode.Multiple)]
+    [Parameter]
+    public GridSelectionMode SelectionMode { get; set; }
+
+    // 필터 행 표시 여부를 제어하는 변수
+    GridFilterMenuButtonDisplayMode _filterMenuButtonDisplayMode = GridFilterMenuButtonDisplayMode.Default;
+
+    [DefaultValue(GridFilterMenuButtonDisplayMode.Default)]
+    [Parameter]
+    public GridFilterMenuButtonDisplayMode FilterMenuButtonDisplayMode { 
+        get
+        {
+            return _filterMenuButtonDisplayMode;
+        } 
+        set
+        {
+            _filterMenuButtonDisplayMode = value;
+        }
+    }
+
+    [DefaultValue(GridColumnResizeMode.Disabled)]
+    [Parameter]
+    public GridColumnResizeMode ColumnResizeMode { get; set; }
+
+    public void AutoFitColumnWidths()
+    {
+        _grid.AutoFitColumnWidths();
+    }
+
+    public Task ExportToXlsxAsync(
+        Stream stream,
+        GridXlExportOptions? options = null
+    )
+    {
+        return _grid.ExportToXlsxAsync(stream, options);
+    }
+
+    public Task ExportToXlsxAsync(
+        string fileName,
+        GridXlExportOptions? options = null
+    )
+    {
+        return _grid.ExportToXlsxAsync(fileName, options);
+    }
+
+
+    // @bind-SelectedDataItem 구문을 지원하기 위해 명시적으로 선언
+    [Parameter]
+    public object? SelectedDataItem { get; set; }
+    [Parameter]
+    public EventCallback<object> SelectedDataItemChanged { get; set; }
+
+
+    // 5. 여기에 선언되지 않은 모든 추가 속성들을 내부 DxGrid로 전달합니다.
+    //    이것이 DxGrid의 모든 속성을 "상속"받는 것처럼 동작하게 하는 핵심입니다.
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? UnmatchedAttributes { get; set; }
+
+    // --- 수정된 부분: @bind- 구문을 안정적으로 지원하기 위한 내부 이벤트 핸들러 ---
+    private Task OnSelectedDataItemChangedInternal(object newSelectedItem)
+    {
+        SelectedDataItem = newSelectedItem;
+        return SelectedDataItemChanged.InvokeAsync(newSelectedItem);
+    }
+
+    // --- 6. DxGrid의 유용한 메서드들을 외부에 노출시킵니다. ---
+
+    /// <summary>
+    /// 그리드의 필터를 초기화합니다.
+    /// </summary>
+    public void ClearFilter() => _grid.ClearFilter();
+
+    /* /// <summary>
+    /// 현재 그리드에 보이는 데이터를 가져옵니다.
+    /// </summary>
+    // --- 수정된 부분: 올바른 API인 GetDataProxy().GetItemsAsync()를 사용합니다. ---
+    public async Task<IReadOnlyList<TData>> GetDataAsync()
+    {
+        var dataProxy = _grid.GetDataProxy();
+        var items = await dataProxy.GetItemsAsync();
+        return items.Cast<TData>().ToList().AsReadOnly();
+    } */
+
+    /// <summary>
+    /// 그리드 데이터를 Excel(.xlsx) 파일로 내보냅니다.
+    /// </summary>
+    public async Task ExportToXlsxAsync(string fileName) => await _grid.ExportToXlsxAsync(fileName);
+
+    /// <summary>
+    /// 그리드 데이터를 CSV 파일로 내보냅니다.
+    /// </summary>
+    public async Task ExportToCsvAsync(string fileName) => await _grid.ExportToCsvAsync(fileName);
+}

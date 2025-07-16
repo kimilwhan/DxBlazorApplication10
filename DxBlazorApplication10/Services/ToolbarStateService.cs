@@ -5,8 +5,10 @@
     {
         // 각 버튼 클릭 시 실행될 액션을 담는 델리게이트입니다.
         public Action? OnSearchClick { get; private set; }
+        public Action? OnAddClick { get; private set; }
         public Action? OnSaveClick { get; private set; }
         public Action? OnDeleteClick { get; private set; }
+        public Action? OnPrintClick { get; private set; }
 
         // 툴바 버튼의 활성화/비활성화 상태
         public bool IsSaveEnabled { get; private set; } = false;
@@ -17,11 +19,13 @@
         /// <summary>
         /// 현재 페이지로부터 실행할 액션들을 등록받습니다.
         /// </summary>
-        public void RegisterToolbarActions(Action? search = null, Action? save = null, Action? delete = null)
+        public void RegisterToolbarActions(Action? search = null, Action? save = null, Action? delete = null, Action? add = null, Action? print = null)
         {
             OnSearchClick = search;
+            OnDeleteClick = add;
             OnSaveClick = save;
             OnDeleteClick = delete;
+            OnPrintClick = print;
             NotifyStateChanged(); // 상태 변경 알림
         }
 
