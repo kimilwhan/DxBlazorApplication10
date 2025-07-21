@@ -1,6 +1,7 @@
 ﻿@page "/weather"
 @attribute [Authorize]
 
+@inherits BasePageComponent
 @using BlazorApp.Services
 @attribute [StreamRendering(true)]
 @rendermode InteractiveServer
@@ -29,8 +30,8 @@ else
 @code {
     private WeatherForecast[]? forecasts;
 
-    protected override async Task OnInitializedAsync()
-    {
-        forecasts = await ForecastService.GetForecastAsync(DateOnly.FromDateTime(DateTime.Now));
-    }
+    // protected override async Task OnInitializedAsync()
+    // {
+    //     forecasts = await ForecastService.GetForecastAsync(DateOnly.FromDateTime(DateTime.Now));
+    // }
 }

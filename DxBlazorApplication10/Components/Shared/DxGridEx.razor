@@ -5,24 +5,45 @@
 @* 2. 컴팩트 헤더 스타일을 이 컴포넌트의 기본 스타일로 내장합니다. *@
 <style>
     /* 이 컴포넌트의 고유 ID를 사용하여 다른 그리드에 영향을 주지 않도록 합니다. */
-    # @_componentId .dx-grid-header-cell {
+    .dx-grid-header-cell {
         padding: 0 4px;
     }
 
-    # @_componentId .dx-grid-header-cell-content {
+    .dx-grid-header-cell-content {
         padding: 4px 0;
     }
 
-    # @_componentId .dx-grid-filter-button {
+    .dx-grid-filter-button {
         padding: 2px;
         margin-left: 2px;
         font-size: 0.8em;
     }
 
-    # @_componentId .dx-grid-sort-indicator {
+    .dx-grid-sort-indicator {
         font-size: 0.8em;
         margin-left: 2px;
     }
+
+    .row -indicator {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        background-color: #f0f2f5; /* 일반 배경색 */
+        color: #5a6d80;
+        font-size: 0.9em;
+    }
+
+    .row-indicator-focused {
+        background-color: #e6f7ff; /* 포커스된 행 배경색 */
+        color: #1890ff;
+        font-weight: bold;
+    }
+
+    .row -indicator .dx-icon {
+        font-size: 16px; /* 아이콘 크기 */
+    }
+
 </style>
 
 @* 3. 우클릭 시 표시될 컨텍스트 메뉴를 정의합니다. *@
@@ -55,11 +76,15 @@
         SelectedDataItem="@SelectedDataItem"
         SelectedDataItemChanged="@OnSelectedDataItemChangedInternal"
         AllowSelectRowByClick="@AllowSelectRowByClick"
+        ColumnResizeMode="@ColumnResizeMode"
+        EditMode="GridEditMode.EditRow"
+        FocusedRowEnabled="true"
+        @bind-FocusedRowIndex="FocusedRowIndex"
         @attributes="@UnmatchedAttributes">
     <Columns>
         @* --- 1. 여기에 고정된 행 번호 열을 추가합니다. --- *@
         <DxGridDataColumn Caption="번호"
-            Width="80px"
+            Width="45" MinWidth="30"
             AllowSort="false"
             FixedPosition="GridColumnFixedPosition.Left">
             <HeaderCaptionTemplate>
@@ -70,7 +95,33 @@
             </HeaderCaptionTemplate>
             <CellDisplayTemplate>
                 @* 2. context.VisibleIndex를 사용하여 행 번호를 표시합니다. *@
-                @(context.VisibleIndex + 1)
+                @{
+                    // 3. 상태에 따른 CSS 클래스 동적 할당
+                    //var indicatorClass = _grid.IsRowFocused(context.VisibleIndex)
+                    var indicatorClass = _grid.IsRowFocused(context.VisibleIndex)
+                    ? "row-indicator row-indicator-focused"
+                    : "row-indicator";
+
+                    //var rowNumber = (PageIndex * Grid.PageSize) + context.VisibleIndex + 1;
+                    var rowNumber = context.VisibleIndex + 1;
+                }                
+                <div class="@indicatorClass">
+                    @if (_grid.IsEditingRow(context.VisibleIndex))
+                    {
+                        // 4. 편집 중일 때 연필 아이콘 표시
+                        <i class="dx-icon dx-icon-edit"></i>
+                    }
+                    else if (_grid.IsRowFocused(context.VisibleIndex))
+                    {
+                        // 5. 포커스된 행에 아이콘 표시
+                        <i class="dx-icon dx-icon-edit"></i>
+                    }
+                    else
+                    {
+                        // 일반 상태에서는 행 번호 표시
+                        @rowNumber
+                    }
+                </div>
             </CellDisplayTemplate>
         </DxGridDataColumn>
         @* --- 외부에서 정의된 열들이 여기에 렌더링됩니다. --- *@
@@ -80,6 +131,9 @@
 </DxGrid>
 
 @code {
+
+    private int FocusedRowIndex { get; set; } = -1;
+
     DxContextMenu? ContextMenu;
     double ContextMenuX;
     double ContextMenuY;
