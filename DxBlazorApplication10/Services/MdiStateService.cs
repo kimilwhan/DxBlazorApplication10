@@ -2,6 +2,7 @@
 using BlazorApp.Models;
 using DevExpress.Blazor;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.JSInterop;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,6 +11,8 @@ namespace BlazorApp.Services
 {
     public class MdiStateService
     {
+        private readonly RouteTableService _routeTable;
+
         public event Action? OnChange;
 
         private readonly IJSRuntime _jsRuntime;
@@ -19,11 +22,12 @@ namespace BlazorApp.Services
         // --- 추가된 부분: 새 창으로 열린 탭의 전체 정보를 추적합니다. ---
         private readonly Dictionary<string, MDITab2> _detachedWindows = new();
 
-        public MdiStateService(IJSRuntime jsRuntime, NavigationManager navigationManager, ThemeService themeService)
+        public MdiStateService(IJSRuntime jsRuntime, NavigationManager navigationManager, ThemeService themeService, RouteTableService routeTable)
         {
             _jsRuntime = jsRuntime;
             _navigationManager = navigationManager;
             _themeService = themeService;
+            _routeTable = routeTable;
         }
 
         public List<MDITab2> OpenTabs { get; } = new();
@@ -67,7 +71,10 @@ namespace BlazorApp.Services
                 return;
             }
 
-            var componentType = Type.GetType(componentPath);
+            //var componentType = Type.GetType(componentPath);
+            // 1. routePath로 Component Type을 조회
+            var componentType = _routeTable.GetTypeForRoute(componentPath);
+
             if (componentType == null)
             {
                 // 컴포넌트 타입을 찾을 수 없는 경우 처리

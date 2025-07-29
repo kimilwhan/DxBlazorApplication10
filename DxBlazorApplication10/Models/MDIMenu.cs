@@ -6,6 +6,7 @@
         public string MenuCD { get; set; } = string.Empty;
         public string? MenuNM { get; set; }
         public string? PageNM { get; set; }
+        public string? RoutePath { get; set; }
         public string? CssClass { get; set; }
         public string? IconCssClass { get; set; }
         public int? ParentID { get; set; }

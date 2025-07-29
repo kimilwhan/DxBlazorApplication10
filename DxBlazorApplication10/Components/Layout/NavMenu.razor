@@ -52,7 +52,7 @@
         //     new() { Text = "Weather", IconCssClass = "oi oi-list-rich", PageComponentType = typeof(Weather) }
         // };
 
-        var sql = @"SELECT MenuID, MenuCD, MenuNM, PageNM, CssClass, IconCssClass, ParentID FROM Menus";
+        var sql = @"SELECT MenuID, MenuCD, MenuNM, PageNM, RoutePath, CssClass, IconCssClass, ParentID FROM Menus";
         var result = await DapperService.QueryAsync<MDIMenu>(sql);
         menuItems.AddRange(result.ToList());
 
@@ -69,7 +69,8 @@
         // }               
         if (e.ItemInfo.Data is MDIMenu menuItem && menuItem.PageNM != null)
         {
-            MdiStateService.OpenTab(menuItem.MenuCD.ToString(), menuItem.MenuNM, menuItem.PageNM);
+            //MdiStateService.OpenTab(menuItem.MenuCD.ToString(), menuItem.MenuNM, menuItem.PageNM);
+            MdiStateService.OpenTab(menuItem.MenuCD.ToString(), menuItem.MenuNM, menuItem.RoutePath);
         }
     }
 }

@@ -47,6 +47,8 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<AuthenticationStateProvider, TokenAuthenticationStateProvider>();
 
 
+// 앱 전체에서 단 하나의 라우트 맵만 유지하도록 Singleton으로 등록
+builder.Services.AddSingleton<RouteTableService>();
 // MDI 상태 관리를 위한 Scoped 서비스 등록
 builder.Services.AddScoped<MdiStateService>();
 builder.Services.AddScoped<MDIStateHelper>();
@@ -63,6 +65,8 @@ builder.Services.AddScoped<IDapperService, DapperService>();
 builder.Services.AddScoped<ToolbarStateService>();
 // Scoped로 등록하여 사용자 세션별로 독립적인 메시지 박스 상태를 유지합니다.
 builder.Services.AddScoped<MessageBoxService>();
+
+
 
 var app = builder.Build();
 
