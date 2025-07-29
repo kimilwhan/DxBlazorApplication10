@@ -1,4 +1,4 @@
-using BlazorApp.Components;
+ï»¿using BlazorApp.Components;
 using BlazorApp.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -17,8 +17,8 @@ builder.Services.AddDevExpressBlazor(options => {
     options.SizeMode = DevExpress.Blazor.SizeMode.Medium;
 });
 
-// 1. AddAuthenticationÀ» È£ÃâÇÏ¿© ÀÎÁõ ¼­ºñ½º¸¦ µî·ÏÇÏ°í, ±âº» ÀÎÁõ ½ºÅ´À» JWT Bearer·Î ¼³Á¤ÇÕ´Ï´Ù.
-//    ÀÌ·¸°Ô ÇÏ¸é ÇÁ·¹ÀÓ¿öÅ©°¡ ÀÎÁõ Ã§¸°Áö°¡ ÇÊ¿äÇÒ ¶§ »ç¿ëÇÒ ±âº» ¹æ½ÄÀ» ¾Ë°Ô µË´Ï´Ù.
+// 1. AddAuthenticationì„ í˜¸ì¶œí•˜ì—¬ ì¸ì¦ ì„œë¹„ìŠ¤ë¥¼ ë“±ë¡í•˜ê³ , ê¸°ë³¸ ì¸ì¦ ìŠ¤í‚´ì„ JWT Bearerë¡œ ì„¤ì •í•©ë‹ˆë‹¤.
+//    ì´ë ‡ê²Œ í•˜ë©´ í”„ë ˆì„ì›Œí¬ê°€ ì¸ì¦ ì±Œë¦°ì§€ê°€ í•„ìš”í•  ë•Œ ì‚¬ìš©í•  ê¸°ë³¸ ë°©ì‹ì„ ì•Œê²Œ ë©ë‹ˆë‹¤.
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -36,24 +36,24 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-// 2. ±ÇÇÑ ºÎ¿©(Authorization) ¼­ºñ½º¸¦ µî·ÏÇÕ´Ï´Ù. [Authorize] Æ¯¼º »ç¿ë¿¡ ÇÊ¿äÇÕ´Ï´Ù.
+// 2. ê¶Œí•œ ë¶€ì—¬(Authorization) ì„œë¹„ìŠ¤ë¥¼ ë“±ë¡í•©ë‹ˆë‹¤. [Authorize] íŠ¹ì„± ì‚¬ìš©ì— í•„ìš”í•©ë‹ˆë‹¤.
 builder.Services.AddAuthorization();
 
-// 2. JWT ±â¹İ ÀÎÁõ ¼­ºñ½º ¼³Á¤
+// 2. JWT ê¸°ë°˜ ì¸ì¦ ì„œë¹„ìŠ¤ ì„¤ì •
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<AuthService>();
 
-// 3. Ä¿½ºÅÒ AuthenticationStateProvider µî·Ï
+// 3. ì»¤ìŠ¤í…€ AuthenticationStateProvider ë“±ë¡
 builder.Services.AddScoped<AuthenticationStateProvider, TokenAuthenticationStateProvider>();
 
 
-// ¾Û ÀüÃ¼¿¡¼­ ´Ü ÇÏ³ªÀÇ ¶ó¿ìÆ® ¸Ê¸¸ À¯ÁöÇÏµµ·Ï SingletonÀ¸·Î µî·Ï
+// ì•± ì „ì²´ì—ì„œ ë‹¨ í•˜ë‚˜ì˜ ë¼ìš°íŠ¸ ë§µë§Œ ìœ ì§€í•˜ë„ë¡ Singletonìœ¼ë¡œ ë“±ë¡
 builder.Services.AddSingleton<RouteTableService>();
-// MDI »óÅÂ °ü¸®¸¦ À§ÇÑ Scoped ¼­ºñ½º µî·Ï
+// MDI ìƒíƒœ ê´€ë¦¬ë¥¼ ìœ„í•œ Scoped ì„œë¹„ìŠ¤ ë“±ë¡
 builder.Services.AddScoped<MdiStateService>();
 builder.Services.AddScoped<MDIStateHelper>();
 
-// --- ¼öÁ¤µÈ ºÎºĞ: MdiStateService¸¦ Scoped·Î º¯°æÇÏ°í ThemeService¸¦ SingletonÀ¸·Î µî·Ï ---
+// --- ìˆ˜ì •ëœ ë¶€ë¶„: MdiStateServiceë¥¼ Scopedë¡œ ë³€ê²½í•˜ê³  ThemeServiceë¥¼ Singletonìœ¼ë¡œ ë“±ë¡ ---
 builder.Services.AddSingleton<ThemeService>();
 
 builder.Services.AddSingleton<WeatherForecastService>();
@@ -61,12 +61,14 @@ builder.Services.AddMvc();
 
 builder.Services.AddScoped<IDapperService, DapperService>();
 
-// Scoped·Î µî·ÏÇÏ¿© »ç¿ëÀÚ ¼¼¼Çº°·Î µ¶¸³ÀûÀÎ Åø¹Ù »óÅÂ¸¦ À¯ÁöÇÕ´Ï´Ù.
+// Scopedë¡œ ë“±ë¡í•˜ì—¬ ì‚¬ìš©ì ì„¸ì…˜ë³„ë¡œ ë…ë¦½ì ì¸ íˆ´ë°” ìƒíƒœë¥¼ ìœ ì§€í•©ë‹ˆë‹¤.
 builder.Services.AddScoped<ToolbarStateService>();
-// Scoped·Î µî·ÏÇÏ¿© »ç¿ëÀÚ ¼¼¼Çº°·Î µ¶¸³ÀûÀÎ ¸Ş½ÃÁö ¹Ú½º »óÅÂ¸¦ À¯ÁöÇÕ´Ï´Ù.
+// Scopedë¡œ ë“±ë¡í•˜ì—¬ ì‚¬ìš©ì ì„¸ì…˜ë³„ë¡œ ë…ë¦½ì ì¸ ë©”ì‹œì§€ ë°•ìŠ¤ ìƒíƒœë¥¼ ìœ ì§€í•©ë‹ˆë‹¤.
 builder.Services.AddScoped<MessageBoxService>();
 
-
+// âœ¨ ì‚¬ìš©ì ìƒíƒœ ê´€ë¦¬ë¥¼ ìœ„í•œ Scoped ì„œë¹„ìŠ¤ ë“±ë¡
+builder.Services.AddScoped<UserStateService>();
+builder.Services.AddScoped<UserService>(); // UserService ë“±ë¡
 
 var app = builder.Build();
 

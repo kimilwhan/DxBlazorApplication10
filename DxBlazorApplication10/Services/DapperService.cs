@@ -31,6 +31,20 @@ namespace BlazorApp.Services
             return await connection.QuerySingleAsync<T>(sql, parameters, commandType: commandType);
         }
 
+        // --- 추가된 메서드 (결과 없으면 null 반환) ---
+        public T? QuerySingleOrDefault<T>(string sql, object? parameters = null, CommandType commandType = CommandType.Text)
+        {
+            using var connection = CreateConnection();
+            return connection.QuerySingleOrDefault<T>(sql, parameters, commandType: commandType);
+        }
+
+        // --- ✨ 오류 해결을 위해 추가된 핵심 메서드 ---
+        public async Task<T?> QuerySingleOrDefaultAsync<T>(string sql, object? parameters = null, CommandType commandType = CommandType.Text)
+        {
+            using var connection = CreateConnection();
+            return await connection.QuerySingleOrDefaultAsync<T>(sql, parameters, commandType: commandType);
+        }
+
         public IEnumerable<T> Query<T>(string sql, object? parameters = null, CommandType commandType = CommandType.Text)
         {
             using var connection = CreateConnection();

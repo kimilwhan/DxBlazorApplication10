@@ -4,6 +4,7 @@
 @inject AuthService AuthService
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime JSRuntime // ✨ 1. JSRuntime 주입
 
 <div class="card shadow-sm" style="width: 25rem;">
     <div class="card-header">
@@ -15,7 +16,7 @@
 
             <div class="mb-3">
                 <label class="form-label">사용자 이름</label>
-                <DxTextBox  @bind-Text="_loginModel.Username" NullText="사용자 이름을 입력하세요" />
+                <DxTextBox @bind-Text="_loginModel.Username" NullText="사용자 이름을 입력하세요" />
                 @* <ValidationMessage For="@(() => _loginModel.Username)" /> *@
             </div>
 
@@ -23,6 +24,13 @@
                 <label class="form-label">비밀번호</label>
                 <DxTextBox @bind-Text="_loginModel.Password" Password="true" NullText="비밀번호를 입력하세요" />
                 @* <ValidationMessage For="@(() => _loginModel.Password)" /> *@
+            </div>
+
+            @* ✨ 2. 아이디 저장 체크박스 추가 *@
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <DxCheckBox @bind-Checked="_rememberMe">아이디 저장</DxCheckBox>
+                <a href="/forgot-password" class="small">비밀번호 찾기</a>
+                <a href="/change-password" class="small">비밀번호 변경</a>
             </div>
 
             @if (!string.IsNullOrEmpty(_errorMessage))
@@ -45,8 +53,28 @@
     [SupplyParameterFromQuery(Name = UrlGenerator.ToggleSidebarName)]
     public bool ToggledSidebar { get; set; }
 
+    //private readonly LoginModel _loginModel = new();
     private readonly LoginModel _loginModel = new();
     private string? _errorMessage;
+    private bool _rememberMe; // ✨ 3. 체크박스와 바인딩될 속성
+
+    // ✨ 1. OnAfterRenderAsync 메서드로 코드 이동
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // ✨ 2. firstRender가 true일 때만 실행하여 불필요한 반복 호출 방지
+        if (firstRender)
+        {
+            var savedUsername = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "rememberedUsername");
+            if (!string.IsNullOrEmpty(savedUsername))
+            {
+                _loginModel.Username = savedUsername;
+                _rememberMe = true;
+
+                // ✨ 3. UI를 다시 렌더링하여 변경된 값을 반영
+                StateHasChanged();
+            }
+        }
+    }
 
     private async Task HandleLogin()
     {
@@ -56,6 +84,16 @@
 
         if (!string.IsNullOrEmpty(token))
         {
+            // ✨ 5. 로그인 성공 시 아이디 저장/삭제 처리
+            if (_rememberMe)
+            {
+                await JSRuntime.InvokeVoidAsync("localStorage.setItem", "rememberedUsername", _loginModel.Username);
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("localStorage.removeItem", "rememberedUsername");
+            }
+
             // 토큰을 받으면, AuthenticationStateProvider를 통해 사용자를 인증된 상태로 만듭니다.
             var tokenAuthStateProvider = (TokenAuthenticationStateProvider)AuthenticationStateProvider;
             tokenAuthStateProvider.MarkUserAsAuthenticated(token);
